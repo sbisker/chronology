@@ -11,6 +11,17 @@ storage = {
     'default_shards_per_bucket': 5,
     'read_size': 5000
     },
+  'elasticsearch': {
+    'backend': 'elasticsearch.ElasticSearchStorage',
+    'hosts': ['localhost:9200'],
+    'cas_index': 'kronos_cas',
+    'event_index_template': 'kronos_template',
+    'event_index_prefix': 'kronos_events_',
+    'read_size': 1000,
+    'alias_period': 2592000,
+    'rollover_size': 5000000,
+    'rollover_check_period_seconds': 300
+    },
   'memory': {
     'backend': 'memory.InMemoryStorage',
     'default_max_items': 1000

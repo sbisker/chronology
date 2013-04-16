@@ -36,3 +36,7 @@ class InMemoryLRUCache(object):
     entry = self.cache[key]
     self.mark_as_lru(entry)
     return entry[0]
+
+  def clear(self):
+    self.cache.clear()
+    self.sentinel[1] = self.sentinel[2] = None
