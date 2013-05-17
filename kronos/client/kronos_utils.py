@@ -1,3 +1,6 @@
+"""
+This will one day be a useful command-line utility to interact with Kronos.
+"""
 from argparse import ArgumentParser
 
 
