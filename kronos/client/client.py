@@ -8,6 +8,7 @@ from collections import defaultdict
 class KronosClientException(Exception):
   pass
 
+
 class KronosClient(object):
   """
   Initialize a Kronos client that can connect to a server at `http_url`
@@ -33,7 +34,10 @@ class KronosClient(object):
   The `blocking` parameter allows the request to block until the server responds,
   and returns some information on the response.  Here's an example:
 
-  TODO(marcua): example
+  If `blocking` is false and the process running the client ends
+  before flushing the pending data to the server, you might lose that
+  data.  Calling `flush` will block until all pending data has been
+  acknowledged by the server.
   """
   def put(self, event_dict):
     if self._blocking:
@@ -43,13 +47,6 @@ class KronosClient(object):
       self._put_queue.append(event_dict)
       self._put_lock.release()
 
-  def flush(self):
-    if not self._blocking:
-      self._put_lock.acquire()
-
-      self._put_lock.release()
-      
-  
   def get(self, stream, start_time, end_time):
     stream_params = {
       'stream': stream,
@@ -82,7 +79,6 @@ class KronosClient(object):
             del stream_params['start_time']
           stream_params['start_id'] = last_id
         time.sleep(num_errors * 0.1)
-
           
   def _setup_nonblocking(self):
     self._put_queue = []
@@ -90,6 +86,9 @@ class KronosClient(object):
 
     me = self
     class PutThread(Thread):
+      def __init__(self):
+        Thread.__init__(self)
+        self.daemon = True
       def run(self):
         while True:
           me.flush()
