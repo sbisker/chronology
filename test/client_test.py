@@ -39,7 +39,6 @@ class TestClient:
     start_time = time.time()
     for stream, acceptable_payloads in self._acceptable_responses.iteritems():
       response = list(client.get(stream, self._now - 20, self._now + 1000))
-      print len(response), self._num_puts, len(acceptable_payloads)
       assert len(response) == (self._num_puts * len(acceptable_payloads))
       for event in response:
         time_val = event[client.time_key]

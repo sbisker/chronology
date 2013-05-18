@@ -54,9 +54,13 @@ def validate_event(event):
                 version=1)
     event[ID_FIELD] = str(uuid)
 
-  if (uuid.time - 0x01b21dd213814000L) * 100 / 1e9 != event[TIMESTAMP_FIELD]:
-    raise InvalidEventTime('%s: mismatch with event id [%s].' %
-                           (event[TIMESTAMP_FIELD], uuid))
+  # TODO(marcua): The verified_timestamp is often not equal to
+  # event[TIMESTAMP_FIELD], but appears to be always within one
+  # hundredth of a second at least.  Is that fine?
+  verified_timestamp = (uuid.time - 0x01b21dd213814000L) * 100 / 1e9
+  if abs(verified_timestamp - event[TIMESTAMP_FIELD]) > 0.01:
+    raise InvalidEventTime('Mismatch timestamp (%f vs. %f) for event id [%s].' %
+                           (verified_timestamp, event[TIMESTAMP_FIELD], uuid))
 
 def validate_stream(stream):
   if not STREAM_REGEX.match(stream):
