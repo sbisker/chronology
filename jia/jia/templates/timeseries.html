@@ -9,6 +9,7 @@
 <script src="/static/js/d3.layout.min.js"></script> 
 <script src="/static/js/rickshaw.min.js"></script> 
 <script src="/static/js/underscore.min.js"></script> 
+<script src="/static/js/date.js"></script> 
 <script src="/static/js/jia.js"></script>
 <script src="/static/js/timeseries.js"></script>
 {% endblock js_includes %}
@@ -16,10 +17,13 @@
 <div class="row">
   <div class="span4">
     <form class="navbar-form pull-left">
-      <input type="text" class="span4" id="series_name" placeholder="series">
-      <input type="text" class="span4" id="x_axis_selector" placeholder="time axis selector">
-      <input type="text" class="span4" id="y_axis_selector" placeholder="y axis selector">
-      <button type="submit" class="btn" id="create_chart">Chart</button>
+      <input type="text" class="span4" id="series_name" placeholder="series name">
+      <input type="text" class="span4" id="start_time" placeholder="something like: -5days">
+      <input type="text" class="span4" id="end_time" placeholder="something like: now">
+      
+      <input type="text" class="span4" id="x_axis_selector" placeholder="time axis selector (e.g., ._time)">
+      <input type="text" class="span4" id="y_axis_selector" placeholder="y axis selector (e.g., .data.money)">
+      <button class="btn" id="create_chart">Chart</button>
     </form>
   </div>
   <div class="span8">

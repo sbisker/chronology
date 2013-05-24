@@ -50,3 +50,26 @@ var TimeseriesCharter = function(chartId, yAxisId, legendId) {
     chart: chart
   };
 };
+
+var DateParser = function() {
+  var regex = /([+-]?\d+)(days|hours)/;
+
+  var parse = function(input) {
+    if (input === 'now') {
+      return Date.now();
+    }
+    var match = input.match(regex);
+    if (match !== null) {
+      if (match[2] === 'days') {
+        return Date.now().addDays(parseFloat(match[1]));
+      } else {
+        return Date.now().addHours(parseFloat(match[1]));
+      }
+    }
+    alert('Invalid time: ' + input);
+  };
+
+  return {
+    parse: parse
+  }
+};
