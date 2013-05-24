@@ -29,8 +29,8 @@ node = {
 # assigned to in an event JSON.
 stream = {
   'fields': {
-    'id': '@id',
-    'timestamp': '@time'
+    'id': '_id',
+    'timestamp': '_time'
     }
   }
 
