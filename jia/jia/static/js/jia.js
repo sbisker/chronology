@@ -1,10 +1,13 @@
-var SeriesRetriever = function(csrf_token) {
+var SeriesRetriever = function(csrfToken) {
   var path = '/kronos/get';
-  
+
   var get = function(series, start, end, callback) {
     $.post(path,
-           {series: series, start: start, end: end, _csrf_token: csrf_token},
-           callback);
+           {series: series, start: start, end: end, _csrf_token: csrfToken},
+           function(data) {
+             csrfToken = data.csrf_token;
+             callback(data.data)
+           });
   };
 
   return {
@@ -13,9 +16,13 @@ var SeriesRetriever = function(csrf_token) {
 };
 
 var TimeseriesCharter = function(chartId, yAxisId, legendId) {
-  var chart = function(xs, ys) {
+  var chart = function(seriesName, xs, ys) {
+    _.each([chartId, yAxisId, legendId], function(element) {
+      $('#' + element).empty();
+    });
     var pairs = _.zip(xs, ys);
     var series = _.map(pairs, function(pair) { return {x: pair[0], y: pair[1]}; });
+    var palette = new Rickshaw.Color.Palette({scheme: 'spectrum14'});
 
     var graph = new Rickshaw.Graph( {
       element: document.getElementById(chartId),
@@ -23,7 +30,8 @@ var TimeseriesCharter = function(chartId, yAxisId, legendId) {
       height: 300,
       renderer: 'line',
       series: [ {
-        color: 'steelblue',
+        color: palette.color(),
+        name: seriesName,
         data: series
       } ]
     } );

@@ -17,7 +17,9 @@ def kronos_get():
     {'_time': time.time()+72*3600, 'data': {'money': 90}},
     {'_time': time.time()+96*3600, 'data': {'money': 90}},           
   ]
-  return jsonify(data=retval)
+  token = app.jinja_env.globals['csrf_token']()
+  json_reply = jsonify(data=retval, csrf_token=token)
+  return json_reply
 
 @app.route('/charts/timeseries')
 @templated()
