@@ -54,9 +54,6 @@ def validate_event(event):
                 version=1)
     event[ID_FIELD] = str(uuid)
 
-  # TODO(marcua): The verified_timestamp is often not equal to
-  # event[TIMESTAMP_FIELD], but appears to be always within one
-  # hundredth of a second at least.  Is that fine?
   verified_timestamp = (uuid.time - 0x01b21dd213814000L) * 100 / 1e9
   if abs(verified_timestamp - event[TIMESTAMP_FIELD]) > 0.01:
     raise InvalidEventTime('Mismatch timestamp (%f vs. %f) for event id [%s].' %

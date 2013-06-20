@@ -13,7 +13,7 @@ storage = {
     #},
   'memory': {
     'backend': 'memory.InMemoryStorage',
-    'default_max_items': 1000000
+    'default_max_items': 100000
     },
   }
 
