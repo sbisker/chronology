@@ -1,4 +1,4 @@
-import cjson
+import cjson as json
 import requests
 import time
 
@@ -72,32 +72,32 @@ class KronosClient(object):
     else:
       stream_params['start_time'] = start_time
 
-    num_errors = 0
+    errors = []
     last_id = None
     done = False
     while not done:
       try:
         response = requests.post(self._get_url,
-                                 data=cjson.encode(stream_params),
+                                 data=json.encode(stream_params),
                                  stream=True)
         if response.status_code != requests.codes.ok:
           raise KronosClientException('Bad server response code %d' %
                                       response.status_code)
         for line in response.iter_lines():
           if line:
-            event = cjson.decode(line)
+            event = json.decode(line)
             last_id = event[self.id_key]
             yield event
         done = True
       except Exception, e:
-        num_errors += 1
-        if num_errors == 10:
-          raise KronosClientException(e)
+        errors.append(e)
+        if len(errors) == 10:
+          raise KronosClientException(errors)
         if last_id != None:
           if 'start_time' in stream_params:
             del stream_params['start_time']
           stream_params['start_id'] = last_id
-        time.sleep(num_errors * 0.1)
+        time.sleep(len(errors) * 0.1)
           
   def _setup_nonblocking(self):
     self._put_queue = []
@@ -136,7 +136,7 @@ class KronosClient(object):
     self.time_key = index['fields']['timestamp']
 
   def _put(self, event_dict):
-    response = requests.post(self._put_url, data=cjson.encode(event_dict))
+    response = requests.post(self._put_url, data=json.encode(event_dict))
     if response.status_code != requests.codes.ok:
       raise KronosClientException('Received response code %s with errors %s' %
                                   (response.status_code,
