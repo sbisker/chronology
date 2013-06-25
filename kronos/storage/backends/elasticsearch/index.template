@@ -4,11 +4,9 @@
     "index.number_of_shards": 2,
     "index.number_of_replicas": 0,
     "index.auto_expand_replicas": false,
-    "index.cache.field.type": "soft",
-    "index.refresh_interval": "30s",
+    "index.refresh_interval": "60s",
     "index.store.compress.stored": true,
     "index.query.default_field": "_source",
-    "index.routing.allocation.total_shards_per_node": 2,
     "analysis": {
       "analyzer": {
         "string_analyzer": {
@@ -19,7 +17,7 @@
             "asciifolding"
           ],
           "type": "custom",
-          "tokenizer": "standard"
+          "tokenizer": "uax_url_email"
         }
       }
     }

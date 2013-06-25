@@ -1,77 +1,16 @@
 import cjson
-import copy
 import gevent
-import random
 import time
-
-from geventhttpclient import HTTPClient
 
 from kronos.core.validators import ID_FIELD, TIMESTAMP_FIELD
 from kronos.storage.backends import BaseStorage
+from kronos.storage.backends.elasticsearch.connection import ElasticSearchConnection
 from kronos.utils.cache import InMemoryLRUCache
-
-# TODO(usmanm): Fetch node list of cluster periodically and update the total
-# set of hosts we have?
-class ElasticSearchClusterConnection(object):
-  def __init__(self, hosts):
-    self.active_nodes = {HTTPClient(server, port=port) for (server, port) in
-                         (host.split(':') for host in hosts)}
-    self.dead_nodes = set()
-    self.retry_greenlet = gevent.spawn(self.retry_loop)
-
-  def retry_loop(self):
-    while 1:
-      gevent.sleep(5*60)
-      self.retry_dead_nodes()
-
-  def retry_dead_nodes(self):
-    if not self.dead_nodes:
-      return
-    # Can concurrently modify self.dead_nodes with retry greenlet, so copy it.
-    dead_nodes = copy.copy(self.dead_nodes)
-    alive_nodes = []
-    for server in dead_nodes:
-      if self.ping(server):
-        alive_nodes.append(server)
-    for server in alive_nodes:
-      self.dead_nodes.discard(server)
-      self.active_nodes.add(server)
-    
-  def ping(self, server):
-    try:
-      server.get('/')
-    except:
-      return False
-    return True
-
-  def request(self, *args, **kwargs):
-    retry = 0
-    while 1:
-      if not self.active_nodes:
-        self.retry_dead_nodes()
-        retry += 1
-        if retry > 3:
-          raise Exception('All elasticsearch servers are unreachable!')
-        continue
-      # O(n). sets don't allow indexing so can't do random.choice.
-      server = random.sample(self.active_nodes, 1)[0] 
-      try:
-        r = server.request(*args, **kwargs)
-        r.body = r.read()
-        try:
-          r.json = cjson.decode(r.body)
-        except:
-          r.json = None
-        return r
-      except:
-        # TODO(usmanm): Log exception.
-        self.active_nodes.discard(server)
-        self.dead_nodes.add(server)
 
 class ElasticSearchStorage(BaseStorage):
   def __init__(self, name, **settings):
     super(ElasticSearchStorage, self).__init__(name, **settings)
-    self.http = ElasticSearchClusterConnection(settings['hosts'])
+    self.http = ElasticSearchConnection(settings['hosts'])
     self.cas_index = settings['cas_index']
     self.event_index_template = settings['event_index_template']
     self.event_index_prefix = settings['event_index_prefix']
@@ -94,10 +33,10 @@ class ElasticSearchStorage(BaseStorage):
     template = template.replace('{{ event_index_prefix }}',
                                 self.event_index_prefix)
     _template = cjson.decode(template)
-    self.num_shards = (_template['settings'].get('index.number_of_shards') or
-                       _template['settings'].get('index', {})
-                       .get('index.number_of_shards') or 
-                       1)
+    self.num_shards = (
+        _template['settings'].get('index.number_of_shards') or
+        _template['settings'].get('index', {}).get('index.number_of_shards') or 
+        1)
 
     # Always update template (in case it's missing, or it was updated).
     self.http.request('PUT', '/_template/%s' % self.event_index_template,
@@ -155,7 +94,7 @@ class ElasticSearchStorage(BaseStorage):
     width equivalent. ElasticSearch uses dot notation for naming nested fields
     and so having dots in field names can potentially lead to issues. (Note that
     Shay Bannon says field names with dots should be avoided even though
-    they *will work* O.o)
+    they *will work* :/)
     '''
     for key in event.keys():
       if insert:
@@ -227,23 +166,23 @@ class ElasticSearchStorage(BaseStorage):
 
     aliases_to_query = []
     alias = self.get_alias(start_time)
-    while 1:
+    while True:
       aliases_to_query.append('%s%s_alias' % (self.event_index_prefix, alias))
       alias += self.alias_period
       if alias > end_time:
         break
       
     events_fetched_so_far = 0
-    while 1:
+    while True:
       query['from'] = events_fetched_so_far
       # This may fail for ElasticSearch versions below 2.0 because they don't
       # support the `ignore_indices` parameter and so if any alias is missing,
       # an exception is returned.
-      r = self.http.request('POST',
-                            ('/%s/%s/_search?search_type=query_and_fetch&'
-                             'ignore_indices=missing') %
-                            (','.join(aliases_to_query), stream),
-                            body=cjson.encode(query))
+      r = self.http.request(
+        'POST',
+        '/%s/%s/_search?search_type=query_and_fetch&ignore_indices=missing' %
+        (','.join(aliases_to_query), stream),
+        body=cjson.encode(query))
       hits = r.json.get('hits', {}).get('hits')
       if not hits:
         # No more events left?
