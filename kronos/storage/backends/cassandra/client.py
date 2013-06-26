@@ -245,8 +245,7 @@ class TimeWidthCassandraStorage(BaseStorage):
                        'keyspace',
                        'replication_factor',
                        'default_width',
-                       'default_shards',
-                       'read_size')
+                       'default_shards')
     for param in required_params:
       try:
         setattr(self, param, settings[param])
@@ -408,7 +407,6 @@ class TimeWidthCassandraStorage(BaseStorage):
                                       start_id, 
                                       # Largest UUID
                                       convert_time_to_uuid(end_time,
-                                                           lowest_val=False),
-                                      self.read_size)
+                                                           lowest_val=False))
     for event in events:
       yield event
