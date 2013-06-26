@@ -252,7 +252,7 @@ class TimeWidthCassandraStorage(BaseStorage):
         setattr(self, param, settings[param])
       except KeyError:
         raise ImproperlyConfigured('{0}: Missing required parameter `{1}`.'
-                                    .format(self.__class__, p))
+                                    .format(self.__class__, param))
 
     if not isinstance(self.hosts, list):
       raise ImproperlyConfigured('{0}: `hosts` must be a list.'
