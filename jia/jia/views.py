@@ -1,27 +1,11 @@
-from decorators import templated
 from flask import jsonify
+from flask import render_template
 from jia import app
 
 @app.route('/')
-@templated()
 def index():
-  return {}
+    # Get the client's user id
+    # Get their saved charts and put them in the views list
+    # Put the form to create a new table/graph at the end of views
+    return render_template("index.html")
 
-@app.route('/kronos/get', methods=['POST'])
-def kronos_get():
-  import time
-  retval = [
-    {'_time': time.time(), 'data': {'money': 35.1}},
-    {'_time': time.time()+24*3600, 'data': {'money': 35.3}},
-    {'_time': time.time()+48*3600, 'data': {'money': 90}},
-    {'_time': time.time()+72*3600, 'data': {'money': 90}},
-    {'_time': time.time()+96*3600, 'data': {'money': 90}},           
-  ]
-  token = app.jinja_env.globals['csrf_token']()
-  json_reply = jsonify(data=retval, csrf_token=token)
-  return json_reply
-
-@app.route('/charts/timeseries')
-@templated()
-def timeseries():
-  return {}
