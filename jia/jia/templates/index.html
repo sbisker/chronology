@@ -1,7 +1,13 @@
-<% extends "base.html" %>
+{% extends "base.html" %}
 
-<% block content %>
-<script type="text/ng-template" id="newVis">
+{% block content %}
+
+
+<ul id="visualizations">
+</ul>
+
+
+<script type="text/template" id="new-vis">
 <form>
     <fieldset>
         <legend>Create a new visualization</legend>
@@ -20,23 +26,34 @@
         <label>Stream:</label> <input type=text placeholder="signups, signups_by_provider, ...">
 
         <label>Metric:</label> <input type=text placeholder="count">
+
+        <button type="Submit" class="btn">Add Visualization</button>
     </fieldset>
 </form>
 </script>
 
-<ul ng-controller="Controller">
-    <li ng-repeat="view in views">
-        {{view.text}}
-    </li>
-</ul>
+<script type="text/template" id="table-vis">
+    Table: <%= data.title %>
+</script>
 
-<% endblock content %>
+<script type="text/template" id="line-vis">
+    Line Graph: <%= data.title %>
+</script>
+
+<script type="text/template" id="bar-vis">
+    Bar Graph: <%= data.title %>
+</script>
+
+{% endblock content %}
 
 
+{% block css_includes %}
+{% endblock css_includes %}
 
-<% block css_includes %>
-<% endblock css_includes %>
-
-<% block js_includes %>
-<% endblock js_includes %>
+{% block js_includes %}
+<script src="/static/js/models.js"></script>
+<script src="/static/js/views.js"></script>
+<script src="/static/js/controllers.js"></script>
+<script src="/static/js/main.js"></script>
+{% endblock js_includes %}
 
