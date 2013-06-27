@@ -2,10 +2,8 @@
 
 {% block content %}
 
-
 <ul id="visualizations">
 </ul>
-
 
 <script type="text/template" id="new-vis">
 <form>
@@ -33,15 +31,13 @@
 </script>
 
 <script type="text/template" id="table-vis">
-    Table: <%= data.title %>
+    <p>Table: <%= data.title %></p>
+    <div class="chart"></div>
+
 </script>
 
-<script type="text/template" id="line-vis">
-    Line Graph: <%= data.title %>
-</script>
-
-<script type="text/template" id="bar-vis">
-    Bar Graph: <%= data.title %>
+<script type="text/template" id="plot-vis">
+    Plot: <%= data.title %>
 </script>
 
 {% endblock content %}
@@ -51,9 +47,6 @@
 {% endblock css_includes %}
 
 {% block js_includes %}
-<script src="/static/js/models.js"></script>
-<script src="/static/js/views.js"></script>
-<script src="/static/js/controllers.js"></script>
 <script src="/static/js/main.js"></script>
 {% endblock js_includes %}
 

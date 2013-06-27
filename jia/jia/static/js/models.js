@@ -1,3 +1,4 @@
+$(function() {
 
 var VisModel = Backbone.Model.extend({
     defaults : function() {
@@ -15,3 +16,4 @@ var VisCollection = Backbone.Collection.extend({
     model : VisModel
 });
 
+});

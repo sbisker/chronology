@@ -1,39 +1,60 @@
-
-// Defined in templates/index.html
-var tableTemplate = _.template($("#table-vis").html());
-var lineGraphTemplate = _.template($("#line-vis").html());
-var barGraphTemplate = _.template($("#bar-vis").html());
-var newVisTemplate = _.template($("new-vis").html());
+$(function() {
 
 var VisView = Backbone.View.extend({
     tagName : "li",
 
     initialize : function() {
+        this.type = this.options.type;
         this.listenTo(this.model, "change", this.render);
     },
 
+    // Templates defined in templates/index.html
     viewTypeToTemplate : {
-        "line" : lineGraphTemplate,
-        "bar"  : barGraphTemplate,
-        "table": tableTemplate
+        "plot" : _.template($("#plot-vis").html()),
+        "table": _.template($("#table-vis").html()),
+        "new"  : _.template($("#new-vis").html()),
     },
 
     render : function() {
         var type = this.model.type;
-        if (_.has(this.viewTypeToTemplate, type)) {
-            var template = this.viewTypeToTemplate[type];
-            this.$el.html(template(this.model.attributes));
+        if (type == "plot") {
+            render_plot();
+        } else if (type == "table") {
+            render_table();
+        } else if (type == "new") {
+            render_new();
         } else {
             console.log("VisView: Unknown model type ["+type+"]");
         }
         return this;
     },
+
+    render_plot : function() {
+        var template = this.viewTypeToTemplate["plot"];
+        this.$el.html(template(this.model.attributes));
+
+        this.graph = new Rickshaw.Graph({
+            element : this.$(".chart"),
+            width   : 500,
+            height  : 500,
+            series  : this.model.data,
+        });
+        this.graph.render();
+    },
+
+    render_table : function() {
+        var template = this.viewTypeToTemplate["table"];
+    },
+
+    render_new : function() {
+        var template = this.viewTypeToTemplate["new"];
+        this.$el.html(template());
+    },
 });
+
 
 var JiaView = Backbone.View.extend({
     $el : $("#visualizations"),
-
-    collection: null,
 
     initialize : function() {
         this.collection = this.options.collection;
@@ -49,4 +70,6 @@ var JiaView = Backbone.View.extend({
     addAll : function() {
         this.collection.each(this.addOne, this);
     },
+});
+
 });
