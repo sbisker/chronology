@@ -6,27 +6,47 @@
 </ul>
 
 <script type="text/template" id="new-vis">
-<form class="form-inline">
+<form class="form-horizontal">
     <fieldset>
         <legend>Create a new visualization</legend>
+        <div class="control-group">
+            <label class="control-label">Type: </label>
+            <div class="controls">
+                <label class="radio">
+                    <input type="radio" name="vistype" value="plot"> plot
+                </label>
+                <label class="radio">
+                    <input type="radio" name="vistype" value="table"> table
+                </label>
+            </div>
+        </div>
 
-        <label>Type: </label>
-        <label class="radio inline">
-            <input type="radio" name="vistype" value="plot"> plot
-        </label>
-        <label class="radio inline">
-            <input type="radio" name="vistype" value="table"> table
-        </label>
+        <div class="control-group">
+            <label class="control-label">Start time:</label>
+            <div class="controls">
+                <input type=text placeholder="-5days, 2013-05-20">
+            </div>
+        </div>
 
-        <label>Start time:</label> <input type=text placeholder="-5days, 2013-05-20">
+        <div class="control-group">
+            <label class="control-label">End time:</label>
+            <div class="controls">
+                <input type=text placeholder="now, 2013-06-13" >
+            </div>
+        </div>
 
-        <label>End time:</label><input type=text placeholder="now, 2013-06-13" >
-
-        <label>Stream:</label> <input type=text placeholder="signups, premium, ...">
+        <div class="control-group">
+            <label class="control-label">Stream:</label>
+            <div class="controls">
+                <input type=text placeholder="signups, premium, ...">
+            </div>
+        </div>
 
         <!--<label>Metric:</label> <input type=text placeholder="count">-->
 
-        <button type="Submit" class="btn">Add Visualization</button>
+        <div class="control-group">
+            <button type="Submit" class="btn">Add Visualization</button>
+        </div>
     </fieldset>
 </form>
 </script>
@@ -51,7 +71,7 @@
 
 {% block js_includes %}
 <!--<script src="/static/js/crossdomain-ajax.js"></script>-->
-<!--<script src="/static/js/kronosclient.js"></script>-->
+<script src="/static/js/kronosclient.js"></script>
 <script src="/static/js/main.js"></script>
 {% endblock js_includes %}
 

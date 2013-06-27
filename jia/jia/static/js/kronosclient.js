@@ -1,11 +1,17 @@
 var KronosClient = function() {
     var self = this;
-    var url = "http://kronos.com"; // TODO(meelap) real url of Kronos server
-                                   // enable CORS on Kronos server for the
-                                   // domain running this client
+
+    // TODO(meelap) real url of Kronos server
+    // enable CORS on Kronos server for the
+    // domain running this client
+    //var url = "http://kronos.locu.com";
+    var url = "http://ec2-54-226-161-30.compute-1.amazonaws.com";
+
     var put_url = url + "/1.0/events/put";
     var get_url = url + "/1.0/events/get";
 
+    // TODO(meelap) allow buffering of puts and flushing them on demand
+    // Jia doesn't do puts, so this can wait until it's needed.
     self.put = function(stream, event) {
         var self = this;
         
@@ -36,7 +42,7 @@ var KronosClient = function() {
                          , type : "POST"
                          , data : JSON.stringify(payload)
                          , success : function(responsetext, xhrobj) {
-                                        return self._get(responstext, xhrobj, callback);
+                                        return self.get_cb(responstext, xhrobj, callback);
                                      }
                          , error : function() {
                                      // TODO(meelap) at least log the error somewhere
@@ -45,7 +51,7 @@ var KronosClient = function() {
                          });
     };
 
-    var self._get = function(responsetext, xhrobj, callback) {
+    self.get_cb = function(responsetext, xhrobj, callback) {
         var events = [];
         for (var rawevent in responsetext.split()) {
             try {
