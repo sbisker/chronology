@@ -1,4 +1,5 @@
 // https://github.com/alexandru/crossdomain-requests-js/blob/gh-pages/public/crossdomain-ajax.js
+// https://www.bionicspirit.com/blog/2011/03/24/cross-domain-requests.html
 //
 // Copyright 2011, Alexandru Nedelcu
 //

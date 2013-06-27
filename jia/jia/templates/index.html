@@ -6,24 +6,25 @@
 </ul>
 
 <script type="text/template" id="new-vis">
-<form>
+<form class="form-inline">
     <fieldset>
         <legend>Create a new visualization</legend>
 
-        <label>Type</label>
-            <select>
-                <option value="line">Line graph</option>
-                <option value="bar">Bar graph</option>
-                <option value="table">Table</option>
-            </select>
+        <label>Type: </label>
+        <label class="radio inline">
+            <input type="radio" name="vistype" value="plot"> plot
+        </label>
+        <label class="radio inline">
+            <input type="radio" name="vistype" value="table"> table
+        </label>
 
         <label>Start time:</label> <input type=text placeholder="-5days, 2013-05-20">
 
         <label>End time:</label><input type=text placeholder="now, 2013-06-13" >
 
-        <label>Stream:</label> <input type=text placeholder="signups, signups_by_provider, ...">
+        <label>Stream:</label> <input type=text placeholder="signups, premium, ...">
 
-        <label>Metric:</label> <input type=text placeholder="count">
+        <!--<label>Metric:</label> <input type=text placeholder="count">-->
 
         <button type="Submit" class="btn">Add Visualization</button>
     </fieldset>
@@ -32,12 +33,14 @@
 
 <script type="text/template" id="table-vis">
     <p>Table: <%= data.title %></p>
-    <div class="chart"></div>
-
+    <table class="table table-striped">
+    </table>
+    <div class="table"></div>
 </script>
 
 <script type="text/template" id="plot-vis">
-    Plot: <%= data.title %>
+    <p>Plot: <%= data.title %></p>
+    <div class="plot"></div>
 </script>
 
 {% endblock content %}
@@ -47,6 +50,8 @@
 {% endblock css_includes %}
 
 {% block js_includes %}
+<!--<script src="/static/js/crossdomain-ajax.js"></script>-->
+<!--<script src="/static/js/kronosclient.js"></script>-->
 <script src="/static/js/main.js"></script>
 {% endblock js_includes %}
 

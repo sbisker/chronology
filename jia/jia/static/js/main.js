@@ -5,14 +5,12 @@ $(function() {
 //
 
 var VisModel = Backbone.Model.extend({
-    defaults : function() {
-        return {
-            type : "new", // table|plot|new
-            title: "Title",
-            start: "yesterday",
-            end  : "today",
-            data : null,
-        }
+    defaults : {
+        "type" : "new",
+        "title": "Add a new visualization",
+        "start": "yesterday",
+        "end"  : "today",
+        "data" : null
     },
 });
 
@@ -30,7 +28,6 @@ var VisView = Backbone.View.extend({
     tagName : "li",
 
     initialize : function() {
-        this.type = this.options.type;
         this.listenTo(this.model, "change", this.render);
     },
 
@@ -59,13 +56,15 @@ var VisView = Backbone.View.extend({
         var template = this.viewTypeToTemplate["plot"];
         this.$el.html(template(this.model.attributes));
 
-        this.graph = new Rickshaw.Graph({
-            element : this.$(".chart"),
-            width   : 500,
-            height  : 500,
-            series  : this.model.data,
+        var graph = new Rickshaw.Graph({
+            element : this.$(".plot")[0],
+            width   : 400,
+            height  : 250,
+            series  : this.model.get("data"),
+            renderer: "line",
+            min     : "auto",
         });
-        this.graph.render();
+        graph.render();
     },
 
     render_table : function() {
@@ -99,13 +98,19 @@ var JiaView = Backbone.View.extend({
 });
 
 
-var Visualizations = new VisCollection;
-
 // Don't use `var` so that it is accessible from console for debugging
+Visualizations = new VisCollection;
 Jia = new JiaView({collection : Visualizations});
+testdata = [
+    { data : [ {x:0,y:0}, {x:1,y:1}, {x:2,y:4},{x:3,y:9}, {x:4,y:16},{x:5,y:25} ],
+      name : "Test Data",
+      color: "blue"}]
 
-var testmodel = new VisModel({type: "new"});
-Visualizations.add(testmodel);
+testnew = new VisModel({type: "new"});
+testplot = new VisModel({type: "plot", data: testdata});
+
+Visualizations.add(testplot);
+Visualizations.add(testnew);
 
 });
 
