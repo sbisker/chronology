@@ -18,14 +18,16 @@ var KronosClient = function() {
         var payload = {};
         payload[stream] = [event];
 
-        crossdomain.ajax({ url : self.put_url
-                         , type : "POST"
-                         , data : JSON.stringify(payload)
-                         , success : function(responsetext, xhrobj) { }
-                         , error : function(responsetext, xhrobj) {
+        crossdomain.ajax({ url : self.put_url,
+                           type : "POST",
+                           data : JSON.stringify(payload),
+                           success : function(responsetext, xhrobj) {
+                                    // TODO(meelap)
+                                     },
+                           error : function(responsetext, xhrobj) {
                                      // TODO(meelap) retry a few times?
                                      // at least log the error somewhere
-                                     }
+                                     },
                          });
     };
 
@@ -33,9 +35,9 @@ var KronosClient = function() {
         // call callback with list of results
         var self = this;
 
-        var payload = { stream     : stream
-                      , start_time : start
-                      , end_time   : end
+        var payload = { stream     : stream,
+                        start_time : start,
+                        end_time   : end
                       };
 
         crossdomain.ajax({ url : self.get_url
@@ -45,8 +47,9 @@ var KronosClient = function() {
                                         return self.get_cb(responstext, xhrobj, callback);
                                      }
                          , error : function() {
-                                     // TODO(meelap) at least log the error somewhere
-                                     }
+                                     // TODO(meelap) better error handling
+                                     console.log("kronos crossdomain call failed");
+                             }
                                 
                          });
     };

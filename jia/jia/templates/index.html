@@ -5,12 +5,11 @@
 <ul id="visualizations">
 </ul>
 
-<script type="text/template" id="new-vis">
-<form class="form-horizontal">
+<form id="new-vis-form" class="form-horizontal">
     <fieldset>
         <legend>Create a new visualization</legend>
-        // TODO(meelap) move plot|table toggle to the actual visualization
-        // Choose whether x-axis is time or sub-attribute
+        <!--TODO(meelap) move plot|table toggle to the actual visualization-->
+         <!--Choose whether x-axis is time or sub-attribute-->
         <div class="control-group">
             <label class="control-label">Type: </label>
             <div class="controls">
@@ -26,21 +25,21 @@
         <div class="control-group">
             <label class="control-label">Start time:</label>
             <div class="controls">
-                <input type=text placeholder="-5days, 2013-05-20">
+                <input id="start-time" type=text placeholder="-5days, yesterday, 2013-05-20">
             </div>
         </div>
 
         <div class="control-group">
             <label class="control-label">End time:</label>
             <div class="controls">
-                <input type=text placeholder="now, 2013-06-13" >
+                <input id="end-time" type=text placeholder="now, 2013-06-13" >
             </div>
         </div>
 
         <div class="control-group">
             <label class="control-label">Stream:</label>
             <div class="controls">
-                <input type=text placeholder="signups, premium, ...">
+                <input id="stream-name" type=text placeholder="signups, premium, ...">
             </div>
         </div>
 
@@ -49,7 +48,6 @@
         </div>
     </fieldset>
 </form>
-</script>
 
 <script type="text/template" id="table-vis">
     <p>Table: <%= data.title %></p>
@@ -68,21 +66,35 @@
 {% endblock content %}
 
 
+
+
 {% block css_includes %}
+
 <link href="/static/css/graph.css" rel="stylesheet">
 <link href="/static/css/legend.css" rel="stylesheet">
 <link href="/static/css/detail.css" rel="stylesheet">
+
 <style>
 .view {
     margin : 50px;
 }
+
+#new-vis-form {
+    margin: 50px;
+}
 </style>
+
 {% endblock css_includes %}
 
+
+
+
 {% block js_includes %}
+
 <script src="/static/js/jquery-ui.min.js"></script>
 <script src="/static/js/crossdomain-ajax.js"></script>
 <script src="/static/js/kronosclient.js"></script>
 <script src="/static/js/main.js"></script>
+
 {% endblock js_includes %}
 

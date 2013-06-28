@@ -1,6 +1,10 @@
 $(function() {
 
-var kronos = new KronosClient;
+Date.prototype.getUnixTime = function() {
+    return Math.floor(this.getTime() / 1000);
+}
+
+var Kronos = new KronosClient;
 
 //
 // Models
@@ -8,7 +12,7 @@ var kronos = new KronosClient;
 
 var VisModel = Backbone.Model.extend({
     defaults : {
-        "type" : "new",
+        "type" : "plot",
         "title": "Add a new visualization",
         "start": "yesterday",
         "end"  : "today",
@@ -39,7 +43,6 @@ var VisView = Backbone.View.extend({
     viewTypeToTemplate : {
         "plot" : _.template($("#plot-vis").html()),
         "table": _.template($("#table-vis").html()),
-        "new"  : _.template($("#new-vis").html()),
     },
 
     render : function() {
@@ -48,8 +51,6 @@ var VisView = Backbone.View.extend({
             this.render_plot();
         } else if (type == "table") {
             this.render_table();
-        } else if (type == "new") {
-            this.render_new();
         } else {
             console.log("VisView: Unknown model type ["+type+"]");
         }
@@ -120,11 +121,6 @@ var VisView = Backbone.View.extend({
         var thead = this.$("thead");
         
     },
-
-    render_new : function() {
-        var template = this.viewTypeToTemplate["new"];
-        this.$el.html(template());
-    },
 });
 
 
@@ -157,7 +153,7 @@ function kronos_to_rickshaw(kronos) {
                         rickshaw[key] = new Array();
                     }
                     rickshaw[key].push({
-                        x: Math.floor(Date.parse(time).getTime() / 1000),
+                        x: Date.parse(time).getUnixTime(),
                         y: value
                     });
                 });
@@ -170,6 +166,32 @@ function kronos_to_rickshaw(kronos) {
     return rickshaw;
 }
 
+$("#new-vis-form").submit(function() {
+    var start_time = Date.parse($("#start-time").text());
+    var end_time = Date.parse($("#end-time").text());
+    var stream_name = $("#stream-name").text();
+
+    // TODO(meelap) echo errors back to the user.
+    if (start_time == null) {
+        console.log("Couldn't parse start time.");
+    } else if (end_time == null) {
+        console.log("Couldn't parse end time.");
+    } else if (stream_name == "") {
+        console.log("Stream name is empty.");
+    } else {
+        Kronos.get(stream_name,
+                   start_time.getUnixTime(),
+                   end_time.getUnixTime(),
+                   create_new_visualization);
+    }
+
+    return false;
+});
+
+function create_new_visualization(responseText, xhrobj) {
+    console.log("kronos_get: "+responseText);
+}
+
 referrer_signups = [
     { "2013-01-01" : { "godaddy" : 10, "opentable" : 20 } },
     { "2013-01-02" : { "godaddy" : 11, "opentable" : 22 } },
@@ -177,7 +199,6 @@ referrer_signups = [
     { "2013-01-04" : { "godaddy" : 14, "opentable" : 22 } },
     { "2013-01-05" : { "godaddy" : 15, "opentable" : 23 } }];
 
-testnew = new VisModel({type: "new"});
 testplot = new VisModel({type: "plot", title:"Customer signups", data: referrer_signups});
 testtable = new VisModel({type: "table", data: referrer_signups});
 
@@ -186,7 +207,5 @@ Jia = new JiaView({collection : Visualizations});
 
 Visualizations.add(testplot);
 Visualizations.add(testtable);
-Visualizations.add(testnew);
 
 });
-
