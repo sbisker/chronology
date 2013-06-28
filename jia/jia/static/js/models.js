@@ -1,19 +1,46 @@
-$(function() {
+if (typeof(Jia) === "undefined") {
+    var Jia = {};
+}
 
-var VisModel = Backbone.Model.extend({
-    defaults : function() {
-        return {
-            type : "table", // table|bar|line
-            title: "Title",
-            start: "yesterday",
-            end  : "today"
-        }
+function kronos_to_rickshaw(kronos) {
+    // Kronos format is:
+    // [ { "@time" : unix_timestamp, "@id" : event_id, attributes... }, ...]
+    var rickshaw = {};
+    _.each(kronos, function(datapoint) {
+        var timestamp = datapoint["@time"];
+        _.each(datapoint, function(value, key) {
+            // TODO(meelap) move these keys to the kronosclient and read them
+            // from there
+            if (key == "@time" || key == "@id") {
+                return;
+            }
+            if (!_.has(rickshaw, key)) {
+                rickshaw[key] = new Array();
+            }
+            rickshaw[key].push({
+                x: timestamp,
+                y: value
+            });
+        });
+    });
+    return rickshaw;
+}
+
+Jia.VisModel = Backbone.Model.extend({
+    defaults : {
+        "type" : "plot",
+        "title": "Add a new visualization",
+        "start": "yesterday",
+        "end"  : "today",
+        "data" : null
+    },
+
+    initialize : function() {
+        //TODO(meelap) convert data from kronos to rickshaw format
     },
 });
 
 
-var VisCollection = Backbone.Collection.extend({
-    model : VisModel
-});
-
+Jia.VisCollection = Backbone.Collection.extend({
+    model : Jia.VisModel
 });
