@@ -18,6 +18,11 @@
 # that don't have any other matching patterns. Otherwise, events for a stream 
 # will be put into the most specific pattern it matches (least number of `*`s).
 
+"cassandra_test":
+  backends:
+    cassandra_timewidth:
+  read_backend: cassandra_timewidth
+
 "*":
   backends:
     memory:
