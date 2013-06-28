@@ -1,5 +1,7 @@
 $(function() {
 
+var kronos = new KronosClient;
+
 //
 // Models
 //
@@ -26,6 +28,8 @@ var VisCollection = Backbone.Collection.extend({
 
 var VisView = Backbone.View.extend({
     tagName : "li",
+
+    className : "view",
 
     initialize : function() {
         this.listenTo(this.model, "change", this.render);
@@ -56,48 +60,65 @@ var VisView = Backbone.View.extend({
         var template = this.viewTypeToTemplate["plot"];
         this.$el.html(template(this.model.attributes));
 
+        var palette = new Rickshaw.Color.Palette({scheme: "munin"});
         var data = kronos_to_rickshaw(this.model.get("data"));
         var series = new Array();
         _.each(data, function(points, name) {
             series.push({
                 name: name,
                 data: points,
-                color: "blue", // TODO(meelap) get random color
+                color: palette.color(),
             });
         });
 
-        var element = this.$(".plot")[0];
-
         var graph = new Rickshaw.Graph({
-            element : element,
+            element : this.$(".plot")[0],
+            interpolation : "linear",
             width   : 400,
             height  : 250,
             series  : series,
-            renderer: "line",
-            min     : "auto",
+            renderer: "area",
+            min     : 0,
         });
         graph.render();
 
         var legend = new Rickshaw.Graph.Legend({
             graph : graph,
-            element : element,
+            element : this.$(".legend")[0],
         });
 
-        // TODO(meelap) need jquery ui sortable for this
-        //var shelving = new Rickshaw.Graph.Behavior.Series.Toggle({
-            //graph : graph,
-            //legend : legend,
-        //});
+        var shelving = new Rickshaw.Graph.Behavior.Series.Toggle({
+            graph : graph,
+            legend : legend,
+        });
 
         var highlighter = new Rickshaw.Graph.Behavior.Series.Highlight({
             graph : graph,
             legend : legend,
         });
+
+        var hoverdetail = new Rickshaw.Graph.HoverDetail({graph: graph});
+
+        var axes = new Rickshaw.Graph.Axis.Time({graph: graph});
+        axes.render();
+        //var xaxis = Rickshaw.Graph.Axis.X({
+            //graph : graph,
+            //ticks : 0, //TODO(meelap) number of ticks
+        //});
+        
+        var yaxis = new Rickshaw.Graph.Axis.Y({
+            graph : graph,
+        }); 
+        yaxis.render();
     },
 
     render_table : function() {
         var template = this.viewTypeToTemplate["table"];
         this.$el.html(template(this.model.attributes));
+
+        var element = this.$(".table")[0];
+        var thead = this.$("thead");
+        
     },
 
     render_new : function() {
@@ -135,8 +156,10 @@ function kronos_to_rickshaw(kronos) {
                     if (!_.has(rickshaw, key)) {
                         rickshaw[key] = new Array();
                     }
-                    var t = parseInt(Date.parse(time).toString("yyyyMMdd"));
-                    rickshaw[key].push({x: t, y: value});
+                    rickshaw[key].push({
+                        x: Math.floor(Date.parse(time).getTime() / 1000),
+                        y: value
+                    });
                 });
             } else {
                 console.log("kronos_to_rickshaw: expecting dictionary ("+time+","+attrs+")");
@@ -147,19 +170,6 @@ function kronos_to_rickshaw(kronos) {
     return rickshaw;
 }
 
-f = kronos_to_rickshaw;
-
-// Don't use `var` so that it is accessible from console for debugging
-Visualizations = new VisCollection;
-Jia = new JiaView({collection : Visualizations});
-testdata = [
-    { data : [ {x:0,y:0}, {x:1,y:1}, {x:2,y:4},{x:3,y:9}, {x:4,y:16},{x:5,y:25} ],
-      name : "Test Data",
-      color: "blue"}]
-// if typeof(value) == "object":
-//      do stacked plot
-//         totals column in table
-// else do regular plot/table
 referrer_signups = [
     { "2013-01-01" : { "godaddy" : 10, "opentable" : 20 } },
     { "2013-01-02" : { "godaddy" : 11, "opentable" : 22 } },
@@ -168,8 +178,11 @@ referrer_signups = [
     { "2013-01-05" : { "godaddy" : 15, "opentable" : 23 } }];
 
 testnew = new VisModel({type: "new"});
-testplot = new VisModel({type: "plot", data: referrer_signups});
+testplot = new VisModel({type: "plot", title:"Customer signups", data: referrer_signups});
 testtable = new VisModel({type: "table", data: referrer_signups});
+
+var Visualizations = new VisCollection;
+Jia = new JiaView({collection : Visualizations});
 
 Visualizations.add(testplot);
 Visualizations.add(testtable);
