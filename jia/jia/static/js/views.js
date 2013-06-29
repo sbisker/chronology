@@ -91,6 +91,7 @@ Jia.VisView = Backbone.View.extend({
         var template = this.viewTypeToTemplate["table"];
         this.$el.html(template(this.model.attributes));
 
+        var sorteddata = _.sortBy(this.model.get("data"), "@time");
         var element = this.$(".table")[0];
         var thead = this.$("thead");
         

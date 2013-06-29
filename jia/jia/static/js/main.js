@@ -34,7 +34,6 @@ $("#new-vis-form").submit(function() {
 
 function create_new_visualization(responseText, xhrobj) {
     console.log("kronos_get: "+responseText);
-    var data = JSON.parse(responseText);
     var newvis = new Jia.VisModel({data: data});
     Jia.main.collection.add(newvis);
 }

@@ -18,18 +18,20 @@ var KronosClient = function() {
         var payload = {};
         payload[stream] = [event];
 
-        crossdomain.ajax({ url : self.put_url,
-                           type : "POST",
-                           data : JSON.stringify(payload),
-                           success : function(responsetext, xhrobj) {
-                                    // TODO(meelap)
-                                     },
-                           error : function(responsetext, xhrobj) {
-                                     // TODO(meelap) retry a few times?
-                                     // at least log the error somewhere
-                                     },
-                         });
-    };
+        crossdomain.ajax(
+            { url : self.put_url,
+              type : "POST",
+              data : JSON.stringify(payload),
+              success : function(responsetext, xhrobj) {
+                   // TODO(meelap)
+              },
+              error : function() {
+                    // TODO(meelap) retry a few times?
+                    // at least log the error somewhere
+              },
+            }
+        );
+    }
 
     self.get = function(stream, start, end, callback) {
         // call callback with list of results
@@ -40,18 +42,19 @@ var KronosClient = function() {
                         end_time   : end
                       };
 
-        crossdomain.ajax({ url : self.get_url
-                         , type : "POST"
-                         , data : JSON.stringify(payload)
-                         , success : function(responsetext, xhrobj) {
-                                        return self.get_cb(responstext, xhrobj, callback);
-                                     }
-                         , error : function() {
-                                     // TODO(meelap) better error handling
-                                     console.log("kronos crossdomain call failed");
-                             }
-                                
-                         });
+        crossdomain.ajax(
+            { url : self.get_url,
+              type : "POST",
+              data : JSON.stringify(payload),
+              success : function(responsetext, xhrobj) {
+                            return self.get_cb(responstext, xhrobj, callback);
+              },
+              error : function() {
+                         // TODO(meelap) better error handling
+                         console.log("kronos crossdomain call failed");
+              },
+            }
+        );
     };
 
     self.get_cb = function(responsetext, xhrobj, callback) {
