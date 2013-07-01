@@ -9,9 +9,9 @@ function kronos_to_rickshaw(kronos) {
     _.each(kronos, function(datapoint) {
         var timestamp = datapoint["@time"];
         _.each(datapoint, function(value, key) {
-            // TODO(meelap) move these keys to the kronosclient and read them
+            // TODO(meelap) move these key names to the kronosclient and read them
             // from there
-            if (key == "@time" || key == "@id") {
+            if (key[0] == "@") {
                 return;
             }
             if (!_.has(rickshaw, key)) {
@@ -36,7 +36,7 @@ Jia.VisModel = Backbone.Model.extend({
     },
 
     initialize : function() {
-        //TODO(meelap) convert data from kronos to rickshaw format
+        this.set("data", _.sortBy(this.get("data"), "@time"));
     },
 });
 

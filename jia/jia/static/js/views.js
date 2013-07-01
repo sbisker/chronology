@@ -91,10 +91,30 @@ Jia.VisView = Backbone.View.extend({
         var template = this.viewTypeToTemplate["table"];
         this.$el.html(template(this.model.attributes));
 
-        var sorteddata = _.sortBy(this.model.get("data"), "@time");
-        var element = this.$(".table")[0];
-        var thead = this.$("thead");
-        
+        var data = this.model.get("data");
+
+        // Get all column names.
+        var allkeys = _.union.apply(null, _.map(data, _.keys))
+        var columns = _.filter(allkeys, function(k) { return k[0] != "@"; });
+
+        var thead = this.$("thead > tr");
+
+        // Create template row for each data point.
+        thead.append("<td>Time</td>");
+        var templatestr = "<tr><td><%=data['@time']%></td>";
+        _.each(columns, function(column) {
+            thead.append("<td>"+column+"</td>");
+            templatestr += "<td><%=data['"+column+"']%></td>";
+        });
+        templatestr += "</tr>";
+
+        // Compile the template.
+        var template = _.template(templatestr);
+
+        var tbody = this.$("tbody");
+        _.each(data, function(point) {
+            tbody.append(template({data: point}));
+        });
     },
 });
 

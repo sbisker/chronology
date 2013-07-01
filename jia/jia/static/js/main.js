@@ -10,12 +10,15 @@ Jia.kronos = new KronosClient;
 
 $(function() {
 $("#new-vis-form").submit(function() {
+    var vis_type = $("#vistype").val();
     var start_time = Date.parse($("#start-time").val());
     var end_time = Date.parse($("#end-time").val());
     var stream_name = $("#stream-name").val();
 
     // TODO(meelap) echo errors back to the user.
-    if (start_time == null) {
+    if (vis_type == null) {
+        console.log("No visualization type chosen.");
+    } else if (start_time == null) {
         console.log("Couldn't parse start time.");
     } else if (end_time == null) {
         console.log("Couldn't parse end time.");
@@ -25,16 +28,18 @@ $("#new-vis-form").submit(function() {
         Jia.kronos.get(stream_name,
                        start_time.getUnixTime(),
                        end_time.getUnixTime(),
-                       create_new_visualization);
+                       _.partial(create_new_vis, vis_type, stream_name));
     }
 
     return false;
 });
 });
 
-function create_new_visualization(responseText, xhrobj) {
+function create_new_visualization(vis_type, stream_name, responseText, xhrobj) {
     console.log("kronos_get: "+responseText);
-    var newvis = new Jia.VisModel({data: data});
+    var newvis = new Jia.VisModel({type: vis_type,
+                                   title: stream_name,
+                                   data: data});
     Jia.main.collection.add(newvis);
 }
 
@@ -47,7 +52,7 @@ referrer_signups = [
 
 $(function() {
 testplot = new Jia.VisModel({type: "plot", title:"Customer signups", data: referrer_signups});
-testtable = new Jia.VisModel({type: "table", data: referrer_signups});
+testtable = new Jia.VisModel({type: "table", title:"Customer signups", data: referrer_signups});
 
 Visualizations = new Jia.VisCollection;
 Jia.main = new Jia.MainView({collection : Visualizations});
