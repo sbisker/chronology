@@ -36,7 +36,6 @@ var KronosClient = function() {
     }
 
     self.get = function(stream, start, end, callback) {
-        // Invoke callback once for each result.
         var self = this;
 
         var payload = { stream     : stream,
@@ -50,15 +49,19 @@ var KronosClient = function() {
                 type : "POST",
                 data : JSON.stringify(payload),
                 success : function(payload) {
-                    for (var rawevent in payload.split("\r\n")) {
+                    var data = [];
+                    _.each(payload.split("\r\n"), function(rawevent) {
                         try {
                             //TODO(meelap) why is this double JSONed
                             var event = JSON.parse(JSON.parse(rawevent));
-                            callback(event);
+                            data.push(event);
                         } catch(e) {
                             console.log("KronosClient.get failed to parse:"+rawevent);
                         }
-                    }
+                    });
+                    // TODO(meelap) add each data point to the model as it is
+                    // parsed. Views can then be updated live.
+                    callback(data);
                 },
                 error : function() {
                     // TODO(meelap) better error handling

@@ -45,6 +45,7 @@ Jia.VisView = Backbone.View.extend({
                 color: palette.color(),
             });
         });
+        Rickshaw.Series.zeroFill(series);
 
         var graph = new Rickshaw.Graph({
             element : this.$(".plot")[0],
