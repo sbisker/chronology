@@ -20,5 +20,9 @@
 
 "*":
   backends:
-    memory:
-  read_backend: memory
+    cassandra_timewidth:
+  read_backend: cassandra_timewidth
+#"*":
+  #backends:
+    #memory:
+  #read_backend: memory

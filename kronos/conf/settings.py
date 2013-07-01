@@ -25,6 +25,7 @@ node = {
   'greenlet_pool_size': 25,
   'log_directory': 'log',
   'cors_whitelist_domains' : map(re.compile, [
+    "http://locudev2.locu.com:8151",
     # Domains that match any regex in this list will be allowed to talk to this
     # Kronos instance
     ])
@@ -34,8 +35,8 @@ node = {
 # assigned to in an event JSON.
 stream = {
   'fields': {
-    'id': '_id',
-    'timestamp': '_time'
+    'id': '@id',
+    'timestamp': '@time'
     }
   }
 

@@ -5,10 +5,10 @@ var KronosClient = function() {
     // enable CORS on Kronos server for the
     // domain running this client
     //var url = "http://kronos.locu.com";
-    var url = "http://ec2-54-226-161-30.compute-1.amazonaws.com";
+    self.url = "http://locudev2.locu.com:8150";
 
-    var put_url = url + "/1.0/events/put";
-    var get_url = url + "/1.0/events/get";
+    self.put_url = self.url + "/1.0/events/put";
+    self.get_url = self.url + "/1.0/events/get";
 
     // TODO(meelap) allow buffering of puts and flushing them on demand
     // Jia doesn't do puts, so this can wait until it's needed.
@@ -23,11 +23,13 @@ var KronosClient = function() {
               type : "POST",
               data : JSON.stringify(payload),
               success : function(responsetext, xhrobj) {
-                   // TODO(meelap)
+                  // TODO(meelap)
+                  console.log(responsetext);
               },
               error : function() {
-                    // TODO(meelap) retry a few times?
-                    // at least log the error somewhere
+                  // TODO(meelap) retry a few times?
+                  // at least log the error somewhere
+                  console.log("error");
               },
             }
         );
@@ -42,26 +44,30 @@ var KronosClient = function() {
                         end_time   : end
                       };
 
-        crossdomain.ajax(
-            { url : self.get_url,
-              type : "POST",
-              data : JSON.stringify(payload),
-              success : function(responsetext, xhrobj) {
-                            return self.get_cb(responstext, xhrobj, callback);
-              },
-              error : function() {
-                         // TODO(meelap) better error handling
-                         console.log("kronos crossdomain call failed");
-              },
-            }
-        );
+        console.log("kronosclient.get: "+payload);
+        try {
+            crossdomain.ajax({
+                url : self.get_url,
+                type : "POST",
+                data : JSON.stringify(payload),
+                success : function(responsetext, xhrobj) {
+                    return self.get_cb(responstext, xhrobj, callback);
+                },
+                error : function() {
+                    // TODO(meelap) better error handling
+                    console.log("kronos crossdomain call failed");
+                },
+            });
+        } catch (e) {
+            console.log("kronosclient.get: "+e);
+        }
     };
 
     self.get_cb = function(responsetext, xhrobj, callback) {
         var events = [];
         for (var rawevent in responsetext.split()) {
             try {
-               event = JSON.parse(rawevent);
+                event = JSON.parse(rawevent);
             } catch(e) {
                 continue;
             }

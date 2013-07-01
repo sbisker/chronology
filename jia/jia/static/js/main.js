@@ -9,8 +9,11 @@ Date.prototype.getUnixTime = function() {
 Jia.kronos = new KronosClient;
 
 $(function() {
-$("#new-vis-form").submit(function() {
-    var vis_type = $("#vistype").val();
+$("#new-vis-form").submit(function(event) {
+    event.preventDefault();
+    event.stopPropagation();
+
+    var vis_type = $("input[name=vistype]:checked").val();
     var start_time = Date.parse($("#start-time").val());
     var end_time = Date.parse($("#end-time").val());
     var stream_name = $("#stream-name").val();
@@ -28,7 +31,9 @@ $("#new-vis-form").submit(function() {
         Jia.kronos.get(stream_name,
                        start_time.getUnixTime(),
                        end_time.getUnixTime(),
-                       _.partial(create_new_vis, vis_type, stream_name));
+                       _.partial(create_new_visualization,
+                                 vis_type,
+                                 stream_name));
     }
 
     return false;

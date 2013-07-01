@@ -32,11 +32,12 @@ def endpoint(url, methods=['GET']):
   def decorator(function, methods = methods):
     @wraps(function)
     def wrapper(environment, start_response):
+      print environment
       try:
         req_method = environment['REQUEST_METHOD']
 
         if req_method == 'OPTIONS':
-          origin = environment['Origin']
+          origin = environment['HTTP_ORIGIN']
           for cors_allowed in settings.node.cors_whitelist_domans:
             if cors_allowed.match(origin):
               # Origin is allowed, so include CORS headers
