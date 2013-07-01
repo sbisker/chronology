@@ -33,22 +33,27 @@ def endpoint(url, methods=['GET']):
     @wraps(function)
     def wrapper(environment, start_response):
       try:
-        server_origin = '{0}://{1}'.format(environment['wsgi.url_scheme'],
-                                           environment['HTTP_HOST'])
-        remote_origin = environment['HTTP_ORIGIN']
-        allowed = server_origin == remote_origin
-        if not allowed:
-          for cors_allowed in settings.node['cors_whitelist_domains']:
-            if cors_allowed.match(remote_origin):
-              # Origin is allowed, so include CORS headers
-              allowed = True
-              headers = [('Access-Control-Allow-Origin', remote_origin),
-                         ('Access-Control-Allow-Methods', ", ".join(methods)),
-                         ('Access-Control-Allow-Headers', ", ".join(['Accept',
-                                                                     'Content-Type',
-                                                                     'Origin',
-                                                                     'X-Requested-With']))]
-              break
+        if environment['REMOTE_ADDR'] == '127.0.0.1':
+          # Skip CORS check for localhost.
+          allowed = True
+          headers = []
+        else:
+          server_origin = '{0}://{1}'.format(environment['wsgi.url_scheme'],
+                                             environment['HTTP_HOST'])
+          remote_origin = environment['HTTP_ORIGIN']
+          allowed = server_origin == remote_origin
+          if not allowed:
+            for cors_allowed in settings.node['cors_whitelist_domains']:
+              if cors_allowed.match(remote_origin):
+                # Origin is allowed, so include CORS headers
+                allowed = True
+                headers = [('Access-Control-Allow-Origin', remote_origin),
+                           ('Access-Control-Allow-Methods', ", ".join(methods)),
+                           ('Access-Control-Allow-Headers', ", ".join(['Accept',
+                                                                       'Content-Type',
+                                                                       'Origin',
+                                                                       'X-Requested-With']))]
+                break
 
         # If origin isn't allowed, don't return any CORS headers.
         # The client's browser will treat this as an error.
