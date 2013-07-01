@@ -36,7 +36,7 @@ var KronosClient = function() {
     }
 
     self.get = function(stream, start, end, callback) {
-        // call callback with list of results
+        // Invoke callback once for each result.
         var self = this;
 
         var payload = { stream     : stream,
@@ -49,8 +49,16 @@ var KronosClient = function() {
                 url : self.get_url,
                 type : "POST",
                 data : JSON.stringify(payload),
-                success : function(responsetext, xhrobj) {
-                    return self.get_cb(responsetext, xhrobj, callback);
+                success : function(payload) {
+                    for (var rawevent in payload.split("\r\n")) {
+                        try {
+                            //TODO(meelap) why is this double JSONed
+                            var event = JSON.parse(JSON.parse(rawevent));
+                            callback(event);
+                        } catch(e) {
+                            console.log("KronosClient.get failed to parse:"+rawevent);
+                        }
+                    }
                 },
                 error : function() {
                     // TODO(meelap) better error handling
@@ -60,18 +68,5 @@ var KronosClient = function() {
         } catch (e) {
             console.log("kronosclient.get: "+e);
         }
-    };
-
-    self.get_cb = function(responsetext, xhrobj, callback) {
-        var events = [];
-        for (var rawevent in responsetext.split()) {
-            try {
-                event = JSON.parse(rawevent);
-            } catch(e) {
-                continue;
-            }
-            events.push(event);
-        }
-        callback(events);
     };
 };

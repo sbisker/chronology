@@ -40,12 +40,12 @@ $("#new-vis-form").submit(function(event) {
 });
 });
 
-function create_new_visualization(vis_type, stream_name, responseText, xhrobj) {
-    console.log("kronos_get: "+responseText);
-    var newvis = new Jia.VisModel({type: vis_type,
-                                   title: stream_name,
-                                   data: data});
-    Jia.main.collection.add(newvis);
+function create_new_visualization(vis_type, stream_name, event) {
+    console.log("kronos_get: "+event);
+    //var newvis = new Jia.VisModel({type: vis_type,
+                                   //title: stream_name,
+                                   //data: data});
+    //Jia.main.collection.add(newvis);
 }
 
 referrer_signups = [
