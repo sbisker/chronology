@@ -32,40 +32,55 @@ def endpoint(url, methods=['GET']):
   def decorator(function, methods = methods):
     @wraps(function)
     def wrapper(environment, start_response):
-      print environment
       try:
+        server_origin = '{0}://{1}'.format(environment['wsgi.url_scheme'],
+                                           environment['HTTP_HOST'])
+        remote_origin = environment['HTTP_ORIGIN']
+        allowed = server_origin == remote_origin
+        if not allowed:
+          for cors_allowed in settings.node['cors_whitelist_domains']:
+            if cors_allowed.match(remote_origin):
+              # Origin is allowed, so include CORS headers
+              allowed = True
+              headers = [('Access-Control-Allow-Origin', remote_origin),
+                         ('Access-Control-Allow-Methods', ", ".join(methods)),
+                         ('Access-Control-Allow-Headers', ", ".join(['Accept',
+                                                                     'Content-Type',
+                                                                     'Origin',
+                                                                     'X-Requested-With']))]
+              break
+
+        # If origin isn't allowed, don't return any CORS headers.
+        # The client's browser will treat this as an error.
+        if not allowed:
+          start_response('200 OK', [('Content-Type', 'text/plain')])
+          print "CORS request not allowed from: {0}".format(remote_origin)
+          return ""
+
         req_method = environment['REQUEST_METHOD']
 
+        # If this is a preflighted CORS request, return CORS headers now.
         if req_method == 'OPTIONS':
-          origin = environment['HTTP_ORIGIN']
-          for cors_allowed in settings.node.cors_whitelist_domans:
-            if cors_allowed.match(origin):
-              # Origin is allowed, so include CORS headers
-              headers = [('Access-Control-Allow-Origin', origin),
-                         ('Access-Control-Allow-Methods', methods),
-                         ('Access-Control-Allow-Headers',
-                         ('Accept', 'Content-Type', 'Origin', 'X-Requested-With'))]
-              start_response('200 OK', headers)
-              return
-          # If origin isn't allowed, don't return any CORS headers
-          # Client's browser will treat this as an error
-          return
+          start_response('200 OK', headers)
+          return ""
 
-        # If the request method is not allowed, return 405
+        # If the request method is not allowed, return 405.
         if req_method not in methods:
-          headers = [('Allow', ', '.join(methods)),
-                     ('Content-Type', 'application/json')]
+          headers.extend([('Allow', ', '.join(methods)),
+                          ('Content-Type', 'application/json')])
           start_repsonse('405 Method Not Allowed', headers)
           error = '{0} method not allowed'.format(req_method)
           return cjson.encode({'@errors' : [error]})
 
-        # All POST bodies must be json, so decode it here
+        # All POST bodies must be json, so decode it here.
         if req_method == 'POST':
           environment['json'] = cjson.decode(environment['wsgi.input'].read())
 
-        return function(environment, start_response)
+        # Pass headers in case this is a simple CORS request
+        return function(environment, start_response, headers)
       except Exception, e:
         start_response('400 Bad Request', [('Content-Type', 'application/json')])
+        print "Exception: {0}".format(e)
         return cjson.encode({'@errors' : [repr(e)]})
 
     # map the URL to serve to this function
@@ -77,7 +92,7 @@ def endpoint(url, methods=['GET']):
   return decorator
 
 @endpoint('/1.0/index')
-def index(environment, start_response):
+def index(environment, start_response, headers=[]):
   """
   Return the status of this Kronos instance + it's backends>
   Doesn't expect any URL parameters.
@@ -94,11 +109,12 @@ def index(environment, start_response):
     status['storage'][name] = {'ok': backend.is_alive(),
                                'backend': settings.storage[name]['backend']}
 
-  start_response('200 OK', [('Content-Type', 'application/json')])
+  headers.append(('Content-Type', 'application/json'))
+  start_response('200 OK', headers)
   return cjson.encode(status)
 
 @endpoint('/1.0/events/put', ['POST'])
-def put(environment, start_response):
+def put(environment, start_response, headers=[]):
   """
   Store events in backends
   POST body should contain a JSON encoded version of:
@@ -152,12 +168,13 @@ def put(environment, start_response):
   if errors:
     response['@errors'] = errors
 
-  start_response('200 OK', [('Content-Type', 'application/json')]) 
+  headers.append(('Content-Type', 'application/json'))
+  start_response('200 OK', headers)
   return cjson.encode(response)
 
 # TODO(usmanm): gzip compress response stream?
 @endpoint('/1.0/events/get', ['POST'])
-def get_events(environment, start_response):
+def get_events(environment, start_response, headers=[]):
   """
   Retrieve events
   POST body should contain a JSON encoded version of:
@@ -179,10 +196,16 @@ def get_events(environment, start_response):
                                          request_json['end_time'],
                                          request_json.get('start_id'),
                                          configuration)
+  headers.append(('Content-Type', 'application/json'))
+  start_response('200 OK', headers)
 
-  start_response('200 OK', [('Content-Type', 'application/json')])
   for event in events_from_backend:
     yield '{0}\r\n'.format(cjson.encode(event))
+
+  # If there were no events, we return the empty string since we can't return
+  # None
+  if events_from_backend is None:
+    yield ""
 
 def wsgi_application(environment, start_response):
   path = environment.get('PATH_INFO', '').rstrip('/')

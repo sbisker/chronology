@@ -44,14 +44,13 @@ var KronosClient = function() {
                         end_time   : end
                       };
 
-        console.log("kronosclient.get: "+payload);
         try {
             crossdomain.ajax({
                 url : self.get_url,
                 type : "POST",
                 data : JSON.stringify(payload),
                 success : function(responsetext, xhrobj) {
-                    return self.get_cb(responstext, xhrobj, callback);
+                    return self.get_cb(responsetext, xhrobj, callback);
                 },
                 error : function() {
                     // TODO(meelap) better error handling
