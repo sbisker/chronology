@@ -8,7 +8,7 @@ storage = {
     'backend': 'cassandra.TimeWidthCassandraStorage',
     'hosts': ['127.0.0.1:9160'],
     'keyspace': 'kronos_tw_dev',
-    'replication_factor': 1,
+    'replication_factor': '1',
     'default_width': 86400,
     'default_shards': 3
     },

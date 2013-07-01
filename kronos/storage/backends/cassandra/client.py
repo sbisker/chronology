@@ -217,11 +217,10 @@ class SortedShardedEventStream(object):
         # the ready_heap.
         if self.ready_heap:
           (next_uuid, next_event) = self.ready_heap[0]
-          next_bucket_start = self.bucket_heap[0].start
-          while next_bucket_start <= next_uuid._time_seconds:
-            self.load_next_bucket()
-            if self.bucket_heap:
-              next_bucket_start = self.bucket_heap[0].start
+          while self.bucket_heap:
+            next_bucket_start = self.bucket_heap[0].start
+            if next_bucket_start <= next_uuid._time_seconds:
+              self.load_next_bucket()
             else:
               break
 
