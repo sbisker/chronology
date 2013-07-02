@@ -35,7 +35,6 @@ $("#new-vis-form").submit(function(event) {
                                  vis_type,
                                  stream_name));
     }
-
     return false;
 });
 });
@@ -47,21 +46,8 @@ function create_new_visualization(type, title, data) {
     Jia.main.collection.add(newvis);
 }
 
-referrer_signups = [
-    { "@time" : 1372058730 , "godaddy" : 10, "opentable" : 20 },
-    { "@time" : 1372158730 , "godaddy" : 11, "opentable" : 22 },
-    { "@time" : 1372258730 , "godaddy" : 12, "opentable" : 26 },
-    { "@time" : 1372358730 , "godaddy" : 14, "opentable" : 22 },
-    { "@time" : 1372458730 , "godaddy" : 15, "opentable" : 23 }];
-
 $(function() {
-testplot = new Jia.VisModel({type: "plot", title:"Customer signups", data: referrer_signups});
-testtable = new Jia.VisModel({type: "table", title:"Customer signups", data: referrer_signups});
-
 Visualizations = new Jia.VisCollection;
 Jia.main = new Jia.MainView({collection : Visualizations});
-
-Visualizations.add(testplot);
-Visualizations.add(testtable);
 });
 

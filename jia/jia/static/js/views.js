@@ -84,6 +84,7 @@ Jia.VisView = Backbone.View.extend({
         
         var yaxis = new Rickshaw.Graph.Axis.Y({
             graph : graph,
+            orientation : 'left',
         }); 
         yaxis.render();
     },
