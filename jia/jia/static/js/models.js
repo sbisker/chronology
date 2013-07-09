@@ -6,12 +6,11 @@ function kronos_to_rickshaw(kronos) {
     // Kronos format is:
     // [ { "@time" : unix_timestamp, "@id" : event_id, attributes... }, ...]
     var rickshaw = {};
+    var isKronosReservedKey = Jia.kronos.isKronosReservedKey;
     _.each(kronos, function(datapoint) {
         var timestamp = datapoint["@time"];
         _.each(datapoint, function(value, key) {
-            // TODO(meelap) move these key names to the kronosclient and read them
-            // from there
-            if (key[0] == "@") {
+            if (isKronosReservedKey(key)) {
                 return;
             }
             if (!_.has(rickshaw, key)) {

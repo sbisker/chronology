@@ -345,7 +345,6 @@ class TimeWidthCassandraStorage(BaseStorage):
       mutator.insert(self.event_cf, bucketname, events)
 
     # Add all index writes to the batch of operations.
-    # TODO(meelap) Figure out exactly how index is used and document it.
     for index, buckets in index_to_buckets.iteritems():
       try:
         self.index_cache.get(index)
@@ -360,7 +359,7 @@ class TimeWidthCassandraStorage(BaseStorage):
     """
     Retrieve events for `stream` between `start_id` and `end_time`.
     `stream` : The stream to return events for.
-    `start_id` : UUID of the first event to return. TODO(meelap): or the next one?
+    `start_id` : UUID of the first event to return.
     `end_time` : The unix time of the last event to return.
     `configuration` : A dictionary of settings to override any default settings,
                       such as number of shards or width of a time interval.

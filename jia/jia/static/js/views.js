@@ -75,12 +75,8 @@ Jia.VisView = Backbone.View.extend({
 
         var hoverdetail = new Rickshaw.Graph.HoverDetail({graph: graph});
 
-        var axes = new Rickshaw.Graph.Axis.Time({graph: graph});
-        axes.render();
-        //var xaxis = Rickshaw.Graph.Axis.X({
-            //graph : graph,
-            //ticks : 0, //TODO(meelap) number of ticks
-        //});
+        var xaxis = new Rickshaw.Graph.Axis.Time({graph: graph});
+        xaxis.render();
         
         var yaxis = new Rickshaw.Graph.Axis.Y({
             graph : graph,
@@ -97,11 +93,11 @@ Jia.VisView = Backbone.View.extend({
 
         // Get all column names.
         var allkeys = _.union.apply(null, _.map(data, _.keys))
-        var columns = _.filter(allkeys, function(k) { return k[0] != "@"; });
+        var columns = _.filter(allkeys, Jia.kronos.isKronosReservedKey);
 
         var thead = this.$("thead > tr");
 
-        // Create template row for each data point.
+        // Create template row for each data point and set table header.
         thead.append("<td>Time</td>");
         var templatestr = "<tr><td><%=data['@time']%></td>";
         _.each(columns, function(column) {
@@ -113,6 +109,7 @@ Jia.VisView = Backbone.View.extend({
         // Compile the template.
         var template = _.template(templatestr);
 
+        // Create row for each datapoint.
         var tbody = this.$("tbody");
         _.each(data, function(point) {
             tbody.append(template({data: point}));
