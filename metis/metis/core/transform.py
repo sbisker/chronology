@@ -312,10 +312,8 @@ class AggregateTransform(Transform):
           value[aggregate] = result[0]/float(result[1]) if result[1] else None
       buckets = json.loads(buckets)
       assert len(buckets) > 0
-      # Make first bucket be key to aggregate over.
-      key = json.dumps(buckets.pop(0))
       value.update(buckets)
-      return (key, value)
+      return value
 
     return (rdd
             .map(_map)
