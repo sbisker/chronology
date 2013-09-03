@@ -75,7 +75,7 @@ def test():
   op = transform.ProjectionTransform(['$total', 'name'])
   rdd = op.apply(spark_context, rdd)
   print '>>> PROJECTION', rdd.collect()[:10]
-  op = transform.AggregateTransform('count')
+  op = transform.AggregateTransform([{'op': 'count'}])
   rdd = op.apply(spark_context, rdd)
   print '>>> AGGREGATE', rdd.collect()[:10]
   compute.CONTEXT_MANAGER.release_context(spark_context)
