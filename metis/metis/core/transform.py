@@ -268,11 +268,11 @@ class AggregateTransform(Transform):
   def apply(self, spark_context, rdd):
     @_expand_args
     def _map(key, event):
+      value = {}
       for aggregate in self.aggregates:
         op = aggregate['op']
         event_key = aggregate.get('key')
         out_key = '%s(%s)' % (op, event_key) if event_key else op
-        value = {}
         if op == 'count':
           value[out_key] = 1 if (event_key in event or event_key is None) else 0
         elif op == 'sum':
