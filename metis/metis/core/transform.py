@@ -305,15 +305,11 @@ class AggregateTransform(Transform):
       return value
 
     @_expand_args
-    def _map2(key, value):
+    def _map2(buckets, value):
       for aggregate, result in value.iteritems():
         op = aggregate.split('(')[0]
         if op == 'average':
           value[aggregate] = result[0]/float(result[1]) if result[1] else None
-      return value
-
-    @_expand_args
-    def _flatten_groups(buckets, value):
       buckets = json.loads(buckets)
       assert len(buckets) > 0
       # Make first bucket be key to aggregate over.
@@ -321,10 +317,7 @@ class AggregateTransform(Transform):
       value.update(buckets)
       return (key, value)
 
-    rdd = (rdd
-           .map(_map)
-           .reduceByKey(_reduce))
-    if self.apply_map2:
-      rdd = rdd.map(_map2)
-
-    return rdd.map(_flatten_groups)
+    return (rdd
+            .map(_map)
+            .reduceByKey(_reduce)
+            .map(_map2))
