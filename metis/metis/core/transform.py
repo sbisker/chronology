@@ -48,7 +48,7 @@ class Transform(object):
 
   @classmethod
   def get_name(cls):
-    if not cls.NAME is None:
+    if cls.NAME is not None:
       return str(cls.NAME).upper()
     return cls.__name__.replace('Transform', '').upper()
 
@@ -269,7 +269,7 @@ class AggregateTransform(Transform):
 
   def _get_canonical_key(self, aggregate):
     return ('%s(%s)' % (aggregate['op'], aggregate['key'])
-            if not aggregate.get('key') is None
+            if aggregate.get('key') is not None
             else aggregate['op'])
 
   def apply(self, spark_context, rdd):
