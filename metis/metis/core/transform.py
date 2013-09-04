@@ -251,19 +251,27 @@ class GroupByTransform(Transform):
 
 class AggregateTransform(Transform):
   def __init__(self, aggregates, **kwargs):
-    self.apply_map2 = False
     for aggregate in aggregates:
-      if aggregate['op'] == 'average':
-        self.has_aggregate = True
       if aggregate.get('key') is None:
         # Only allow `count` aggregate if aggregating over entire event tuple.
         assert aggregate['op'] == 'count'
     self.aggregates = aggregates
+    self.canonical_key_to_alias = {}
+    for aggregate in aggregates:
+      if aggregate.get('alias') is None:
+        continue
+      self.canonical_key_to_alias[
+          self._get_canonical_key(aggregate)] = str(aggregate['alias'])
 
   def to_dict(self):
     dictionary = super(AggregateTransform, self).serialize()
     dictionary['aggregates'] = self.aggregates
     return dictionary
+
+  def _get_canonical_key(self, aggregate):
+    return ('%s(%s)' % (aggregate['op'], aggregate['key'])
+            if not aggregate.get('key') is None
+            else aggregate['op'])
 
   def apply(self, spark_context, rdd):
     @_expand_args
@@ -272,17 +280,18 @@ class AggregateTransform(Transform):
       for aggregate in self.aggregates:
         op = aggregate['op']
         event_key = aggregate.get('key')
-        out_key = '%s(%s)' % (op, event_key) if event_key else op
+        canonical_key = self._get_canonical_key(aggregate)
         if op == 'count':
-          value[out_key] = 1 if (event_key in event or event_key is None) else 0
+          value[canonical_key] = (1 if (event_key in event or event_key is None)
+                                  else 0)
         elif op == 'sum':
-          value[out_key] = event.get(event_key, 0)
+          value[canonical_key] = event.get(event_key, 0)
         elif op == 'min':
-          value[out_key] = event.get(event_key, float('inf'))
+          value[canonical_key] = event.get(event_key, float('inf'))
         elif op == 'max':
-          value[out_key] = event.get(event_key, -float('inf'))
+          value[canonical_key] = event.get(event_key, -float('inf'))
         elif self.op == 'avg':
-          value[out_key] = ((event[event_key], 1) if event_key in event
+          value[canonical_key] = ((event[event_key], 1) if event_key in event
                             else (0, 0))
       return (key, value)
 
@@ -306,10 +315,18 @@ class AggregateTransform(Transform):
 
     @_expand_args
     def _map2(buckets, value):
-      for aggregate, result in value.iteritems():
-        op = aggregate.split('(')[0]
+      canonical_keys = value.keys()
+      for canonical_key in canonical_keys:
+        result = value[canonical_key]
+        op = canonical_key.split('(')[0]
         if op == 'average':
-          value[aggregate] = result[0]/float(result[1]) if result[1] else None
+          value[canonical_key] = (result[0]/float(result[1]) if result[1]
+                                  else None)
+        # Create aliases.
+        if canonical_key in self.canonical_key_to_alias:
+          value[
+              self.canonical_key_to_alias[canonical_key]] = value[canonical_key]
+          del value[canonical_key]
       buckets = json.loads(buckets)
       assert len(buckets) > 0
       for bucket in buckets:
