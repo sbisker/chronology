@@ -260,38 +260,30 @@ class AggregateTransform(Transform):
       if aggregate.get('alias') is None:
         continue
       self.canonical_key_to_alias[
-          self._get_canonical_key(aggregate)] = str(aggregate['alias'])
+          (aggregate['op'], aggregate.get('key'))] = str(aggregate['alias'])
 
   def to_dict(self):
     dictionary = super(AggregateTransform, self).serialize()
     dictionary['aggregates'] = self.aggregates
     return dictionary
 
-  def _get_canonical_key(self, aggregate):
-    return ('%s(%s)' % (aggregate['op'], aggregate['key'])
-            if aggregate.get('key') is not None
-            else aggregate['op'])
-
   def apply(self, spark_context, rdd):
     @_expand_args
     def _map(key, event):
       value = {}
       for aggregate in self.aggregates:
-        op = aggregate['op']
-        event_key = aggregate.get('key')
-        canonical_key = self._get_canonical_key(aggregate)
+        c_key = (aggregate['op'], aggregate.get('key'))
+        op, event_key = c_key
         if op == 'count':
-          value[canonical_key] = (1 if (event_key in event or event_key is None)
-                                  else 0)
+          value[c_key] = 1 if (event_key in event or event_key is None) else 0
         elif op == 'sum':
-          value[canonical_key] = event.get(event_key, 0)
+          value[c_key] = event.get(event_key, 0)
         elif op == 'min':
-          value[canonical_key] = event.get(event_key, float('inf'))
+          value[c_key] = event.get(event_key, float('inf'))
         elif op == 'max':
-          value[canonical_key] = event.get(event_key, -float('inf'))
+          value[c_key] = event.get(event_key, -float('inf'))
         elif self.op == 'avg':
-          value[canonical_key] = ((event[event_key], 1) if event_key in event
-                            else (0, 0))
+          value[c_key] = (event[event_key], 1) if event_key in event else (0, 0)
       return (key, value)
 
     def _reduce(value1, value2):
@@ -299,33 +291,36 @@ class AggregateTransform(Transform):
       assert isinstance(value2, dict)
       assert set(value1) == set(value2)
       value = {}
-      for key in value1:
-        op = key.split('(')[0]
+      for c_key in value1:
+        op = c_key[0]
         if op in ('count', 'sum'):
-          value[key] = value1[key] + value2[key]
+          value[c_key] = value1[c_key] + value2[c_key]
         elif op == 'min':
-          value[key] = min(value1[key], value2[key])
+          value[c_key] = min(value1[c_key], value2[c_key])
         elif op == 'max':
-          value[key] = max(value1[key], value2[key])
+          value[c_key] = max(value1[c_key], value2[c_key])
         elif self.op == 'avg':
-          value[key] = (value1[key][0] + value2[key][0],
-                        value1[key][1] + value2[key][1])
+          value[c_key] = (value1[c_key][0] + value2[c_key][0],
+                          value1[c_key][1] + value2[c_key][1])
       return value
 
     @_expand_args
     def _map2(buckets, value):
-      canonical_keys = value.keys()
-      for canonical_key in canonical_keys:
-        result = value[canonical_key]
-        op = canonical_key.split('(')[0]
+      c_keys = value.keys()
+      for c_key in c_keys:
+        result = value[c_key]
+        op = c_key[0]
         if op == 'average':
-          value[canonical_key] = (result[0]/float(result[1]) if result[1]
+          value[c_key] = (result[0]/float(result[1]) if result[1]
                                   else None)
-        # Create aliases.
-        if canonical_key in self.canonical_key_to_alias:
-          value[
-              self.canonical_key_to_alias[canonical_key]] = value[canonical_key]
-          del value[canonical_key]
+        if c_key in self.canonical_key_to_alias:
+          new_key = self.canonical_key_to_alias[c_key]
+        elif c_key[1] is None:
+          new_key = op
+        else:
+          new_key = '%s(%s)' % c_key
+        value[new_key] = value[c_key]
+        del value[c_key]            
       buckets = json.loads(buckets)
       assert len(buckets) > 0
       for bucket in buckets:
