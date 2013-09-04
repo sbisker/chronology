@@ -1,6 +1,5 @@
 import inspect
 import json
-import operator
 import re
 import sys
 import types
