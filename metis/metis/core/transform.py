@@ -311,8 +311,7 @@ class AggregateTransform(Transform):
         result = value[c_key]
         op = c_key[0]
         if op == 'average':
-          value[c_key] = (result[0]/float(result[1]) if result[1]
-                                  else None)
+          value[c_key] = result[0]/float(result[1]) if result[1] else None
         if c_key in self.canonical_key_to_alias:
           new_key = self.canonical_key_to_alias[c_key]
         elif c_key[1] is None:

@@ -35,22 +35,16 @@ def _create_archive_for_pyspark():
     # If zip file is present and we're not running in debug mode, don't
     # regenerate it.
     return
-  walk_path = '%s/metis/' % _METIS_PATH
-  zip_file = zipfile.ZipFile(zip_file_path, 'w')
-  # TODO(usmanm): Zip only the minimum set of files needed.
-  for root, dirs, files in os.walk(walk_path):
-    for _file in files:
-      if root == walk_path and _file.startswith('__init__.py'):
-        # Don't copy this file. Instead we create an empty file as a
-        # replacement.
-        continue
-      zip_file.write(os.path.join(root, _file),
-                     os.path.join(root.replace(_METIS_PATH, ''), _file))
-  # TODO(usmanm): Hack to ensure __init__.py file is empty and has no
-  # initialization code.
-  zip_file.write(os.path.join(_METIS_PATH, 'metis/__main__.py'),
-                 'metis/__init__.py')
-  zip_file.close()
+  with zipfile.ZipFile(zip_file_path, 'w') as zip_file:
+    for _file in ('metis/conf/__init__.py',
+                  'metis/conf/constants.py',
+                  'metis/core/__init__.py',
+                  'metis/core/transform.py'):
+      zip_file.write(os.path.join(_METIS_PATH, _file), _file)
+    # TODO(usmanm): Hack to ensure metis/__init__.py file is empty and has no
+    # initialization code.
+    zip_file.write(os.path.join(_METIS_PATH, 'metis/__main__.py'),
+                   'metis/__init__.py')
   app.config['METIS_ZIP_FILE'] = zip_file_path
 
 _create_archive_for_pyspark()
