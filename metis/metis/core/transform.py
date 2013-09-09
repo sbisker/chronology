@@ -55,7 +55,7 @@ class Transform(object):
   def to_dict(self):
     return {'transform': self.get_name()}
 
-  def apply(self, spark_context, rdd):
+  def apply(self, rdd):
     raise NotImplemented
 
 
@@ -84,7 +84,7 @@ class ProjectionTransform(Transform):
       return event
     return (key, event)
 
-  def apply(self, spark_context, rdd):
+  def apply(self, rdd):
     return rdd.map(self._project)
 
 
@@ -118,7 +118,7 @@ class FilterTransform(Transform):
         return False
     return func
   
-  def apply(self, spark_context, rdd):
+  def apply(self, rdd):
     if self.op == 'lt':
       return rdd.filter(
           self._safe_lambda(lambda event: event[self.key] < self.value))
@@ -171,7 +171,7 @@ class GroupByTimeTransform(Transform):
       time_bucket.extend(bucket)
     return (json.dumps(time_bucket), event)
 
-  def apply(self, spark_context, rdd):
+  def apply(self, rdd):
     return rdd.map(self._map_into_time_buckets)
 
 
@@ -186,7 +186,7 @@ class OrderByTransform(Transform):
     dictionary['keys'] = self.keys
     return dictionary
 
-  def apply(self, spark_context, rdd):
+  def apply(self, rdd):
     # TODO(usmanm): Is there a more efficient way to do this? PySpark doesn't
     # seem to have a notion of OrderedRDD (which exists in Scala land and 
     # supports a `sortByKey` operation).
@@ -196,13 +196,13 @@ class OrderByTransform(Transform):
                                     tuple(y.get(key) for key in self.keys))
     if key is None:
       events = sorted(rdd.collect(), cmp_function, reverse=self.reverse)
-      return spark_context.parallelize(events)
+      return rdd.context.parallelize(events)
     grouped_map = rdd.groupByKey().collectAsMap()
     def iterator():
       for key, values in grouped_map.iteritems():
         values = sorted(values, cmp_function, reverse=self.reverse)
         yield (key, values)
-    return spark_context.parallelize(iterator())
+    return rdd.context.parallelize(iterator())
 
 
 class LimitTransform(Transform):
@@ -214,12 +214,12 @@ class LimitTransform(Transform):
     dictionary['limit'] = self.limit
     return dictionary
 
-  def apply(self, spark_context, rdd):
+  def apply(self, rdd):
     # TODO(usmanm): Is there a more efficient way to do this?
     first = rdd.first()
     key, event = _get_key_value(first)
     if key is None:
-      return spark_context.parallelize(rdd.take(self.limit))
+      return rdd.context.parallelize(rdd.take(self.limit))
     if not isinstance(event, list):
       rdd = rdd.groupAsKey()
     return rdd.flatMap(
@@ -237,7 +237,7 @@ class GroupByTransform(Transform):
     dictionary['keys'] = self.keys
     return dictionary
 
-  def apply(self, spark_context, rdd):
+  def apply(self, rdd):
     def _map(arg):
       bucket, event = _get_key_value(arg)
       if bucket is None:
@@ -267,7 +267,7 @@ class AggregateTransform(Transform):
     dictionary['aggregates'] = self.aggregates
     return dictionary
 
-  def apply(self, spark_context, rdd):
+  def apply(self, rdd):
     @_expand_args
     def _map(key, event):
       value = {}
