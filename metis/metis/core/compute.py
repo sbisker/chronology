@@ -11,7 +11,6 @@ def _get_kronos_rdd(stream, start_time, end_time):
   events = _KRONOS.get(stream, start_time, end_time)
   spark_context = spark.get_context()
   rdd = spark_context.parallelize(events)
-  spark.release_context_on_collect(rdd)
   return rdd
 
 def execute_compute_task(stream_in, start_time, end_time, transforms,

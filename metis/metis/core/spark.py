@@ -2,8 +2,20 @@ import threading
 import time
 
 from pyspark import SparkContext
+from pyspark.rdd import RDD
 
 from metis import app
+
+def _patch_rdd():
+  _collect = RDD.collect
+  def collect(self):
+    data = _collect(self)
+    _MANAGER.release_context(self.context)
+    return data
+  RDD.collect = collect
+
+_patch_rdd()
+
 
 class SparkContextManager(object):
   def __init__(self, wait_seconds=15):
@@ -13,7 +25,14 @@ class SparkContextManager(object):
       self._max_contexts = app.config['NUM_WORKERS']
     self._cv = threading.Condition()
     self._contexts_created = 0
-    self._queue = []
+    self._queue = []    
+
+  def _create_context(self):
+    # Also ship the Metis zip file so worker nodes can deserialize Metis
+    # internal objects.
+    return SparkContext(app.config['SPARK_MASTER'],
+                        'Metis-%s' % self._contexts_created,
+                        pyFiles=[app.config['METIS_ZIP_FILE']])  
 
   def release_context(self, context):
     self._cv.acquire()
@@ -21,17 +40,10 @@ class SparkContextManager(object):
     self._cv.notify()
     self._cv.release()
 
-  def _create_context(self):
-    # Also ship the Metis zip file so worker nodes can deserialize Metis
-    # internal objects.
-    return SparkContext(app.config['SPARK_MASTER'],
-                        'Metis-%s' % self._contexts_created,
-                        pyFiles=[app.config['METIS_ZIP_FILE']])
-
   def get_context(self):
     self._cv.acquire()
     while True:
-      if not (self._queue and self._contexts_created < self._max_contexts):
+      if not (self._queue or self._contexts_created < self._max_contexts):
         self._cv.wait()
       if self._queue:
         context, last_used_time = self._queue.pop()
@@ -43,13 +55,3 @@ class SparkContextManager(object):
 
 _MANAGER = SparkContextManager()
 get_context = _MANAGER.get_context
-
-
-def release_context_on_collect(rdd):
-  def collect(self):
-    data = rdd._collect()
-    _MANAGER.release_context(rdd.context)
-    return data
-  rdd._collect = rdd.collect
-  rdd.collect = collect
-  return rdd
