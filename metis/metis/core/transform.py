@@ -43,6 +43,19 @@ def parse(value):
   return TRANSFORM_MAP[value['transform']](**value)
 
 def optimize(transforms):
+  has_aggregate = has_groupby = False
+  for transform in transforms:
+    if isinstance(transform, AggregateTransform):
+      has_aggregate = True
+    elif (isinstance(transform, GroupByTransform) or
+          isinstance(transform, GroupByTimeTransform)):
+      has_groupby = True
+  # Only support group operators if an aggregator is being applied afterwards.
+  # Transformations in Metis are closed in the sense that any transformed stream
+  # can be dumped back into Kronos.
+  if has_groupby and not has_aggregate:
+    raise ValueError
+  # TODO(usmanm): Add more optimizations here.
   return transforms
 
 
@@ -70,8 +83,7 @@ class NullTransform(Transform):
 class ProjectionTransform(Transform):
   def __init__(self, keys, **kwargs):
     self.keys = set(keys)
-    # Always project id and timestamp fields.
-    self.keys.add(constants.ID_FIELD)
+    # Always project the timestamp field.
     self.keys.add(constants.TIMESTAMP_FIELD)
     
   def to_dict(self):

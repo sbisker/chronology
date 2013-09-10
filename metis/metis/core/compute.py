@@ -1,4 +1,5 @@
 from metis import app
+from metis.conf import constants
 from metis.core import transform
 from metis.core import spark
 from metis.lib.kronos.client import KronosClient
@@ -8,9 +9,14 @@ _KRONOS = KronosClient(app.config['KRONOS_SERVER'], blocking=True)
 
 
 def _get_kronos_rdd(stream, start_time, end_time):
-  events = _KRONOS.get(stream, start_time, end_time)
+  def get_events():
+    events = _KRONOS.get(stream, start_time, end_time)
+    for event in events:
+      # Strip the ID field from each event.
+      del event[constants.ID_FIELD]
+      yield event
   spark_context = spark.get_context()
-  rdd = spark_context.parallelize(events)
+  rdd = spark_context.parallelize(get_events())
   return rdd
 
 
