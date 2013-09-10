@@ -1,5 +1,4 @@
 import inspect
-import json
 import re
 import sys
 import types

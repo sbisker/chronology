@@ -41,7 +41,7 @@ def _compute():
 @app.route('/test')
 def test():
   import json, random, requests
-  from metis.core import transform
+  from metis.core import spark, transform
   stream = 'locu.widget.view.sum.86400'
   start_time = 13692060000000000
   end_time = 13772154593060000
@@ -58,7 +58,7 @@ def test():
     event['name'] = random.choice(['alice', 'bob', 'charlie', 'dick', 'eugene',
                                    'fraser', 'gomes'])
     events.append(event)
-  spark_context = compute.CONTEXT_MANAGER.get_context()
+  spark_context = spark.get_context()
   rdd = spark_context.parallelize(events)
   op = transform.FilterTransform('$total', 'gt', 140000)
   rdd = op.apply(spark_context, rdd)
@@ -79,5 +79,5 @@ def test():
                                      {'op': 'sum', 'key': '$total'}])
   rdd = op.apply(spark_context, rdd)
   print '>>> AGGREGATE', rdd.collect()[:10]
-  compute.CONTEXT_MANAGER.release_context(spark_context)
+  rdd.release()
   return jsonify({})
