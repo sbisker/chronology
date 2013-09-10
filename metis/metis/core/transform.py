@@ -1,4 +1,3 @@
-import banyan
 import inspect
 import json
 import re
@@ -45,6 +44,7 @@ def parse(value):
 
 
 def validate(transforms):
+  import banyan
   # Transformations in Metis are closed in the sense that any transformed stream
   # can be dumped back into Kronos. This requires us to have enforce the
   # following constraints:
