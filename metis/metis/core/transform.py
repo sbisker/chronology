@@ -242,12 +242,12 @@ class GroupByTransform(Transform):
   def apply(self, rdd):
     def _map(arg):
       bucket, event = _get_key_value(arg)
-      if bucket:
+      if bucket is not None:
         bucket = json.loads(bucket)
       else:
         bucket = []
       bucket.extend((key, event.get(key)) for key in self.keys)
-      return (bucket, event)
+      return (json.dumps(bucket), event)
     return rdd.map(_map)
 
 
