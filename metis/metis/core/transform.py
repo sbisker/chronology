@@ -42,6 +42,9 @@ def parse(value):
     raise ValueError
   return TRANSFORM_MAP[value['transform']](**value)
 
+def optimize(transforms):
+  return transforms
+
 
 class Transform(object):
   NAME = None # Optional override of name.
@@ -163,13 +166,12 @@ class GroupByTimeTransform(Transform):
     bucket, event = _get_key_value(arg)
     time = event[constants.TIMESTAMP_FIELD]
     # Ceiling of `time` when rounded by `self.time_width`.
-    time_bucket = [{constants.TIMESTAMP_FIELD: 
-                    int(time - (time % self.time_width) + self.time_width)}]
+    time_bucket = [(constants.TIMESTAMP_FIELD, 
+                    int(time - (time % self.time_width) + self.time_width))]
     if bucket is not None:
-      bucket = json.loads(bucket)
       # Time bucket should always be first *key*.
       time_bucket.extend(bucket)
-    return (json.dumps(time_bucket), event)
+    return (time_bucket, event)
 
   def apply(self, rdd):
     return rdd.map(self._map_into_time_buckets)
@@ -241,10 +243,9 @@ class GroupByTransform(Transform):
     def _map(arg):
       bucket, event = _get_key_value(arg)
       if bucket is None:
-        return (json.dumps([{key: event.get(key)} for key in self.keys]), event)
-      bucket = json.loads(bucket)
-      bucket.extend({key: event.get(key)} for key in self.keys)
-      return (json.dumps(bucket), event)
+        bucket = []
+      bucket.extend((key, event.get(key)) for key in self.keys)
+      return (bucket, event)
     return rdd.map(_map)
 
 
@@ -320,10 +321,9 @@ class AggregateTransform(Transform):
           new_key = '%s(%s)' % c_key
         value[new_key] = value[c_key]
         del value[c_key]            
-      buckets = json.loads(buckets)
       assert len(buckets) > 0
-      for bucket in buckets:
-        value.update(bucket)
+      for bucket, bucket_value in buckets:
+        value[bucket] = bucket_value
       return value
 
     return (rdd

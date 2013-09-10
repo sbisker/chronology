@@ -13,12 +13,14 @@ def _get_kronos_rdd(stream, start_time, end_time):
   rdd = spark_context.parallelize(events)
   return rdd
 
+
 def execute_compute_task(stream_in, start_time, end_time, transforms,
                          stream_out):
-  x = len(spark._MANAGER._queue)
   rdd = _get_kronos_rdd(stream_in, start_time, end_time)
-  for json_transform in transforms:
-    metis_transform = transform.parse(json_transform)
+  metis_transforms = [transform.parse(json_transform)
+                      for json_transform in transforms]
+  transform.optimize(metis_transforms)
+  for metis_transform in transforms:
     rdd = metis_transform.apply(rdd)
   result = rdd.collect()
   rdd.release()
