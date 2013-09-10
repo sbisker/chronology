@@ -1,3 +1,4 @@
+import gevent
 import threading
 import time
 
@@ -14,13 +15,32 @@ _patch_rdd()
 
 class SparkContextManager(object):
   def __init__(self, wait_seconds=15):
+    self._wait_seconds = wait_seconds
+    self._cv = threading.Condition()
+    self._contexts_created = 0
+    self._queue = []
     if app.debug:
       self._max_contexts = 1
     else:
       self._max_contexts = app.config['NUM_WORKERS']
-    self._cv = threading.Condition()
-    self._contexts_created = 0
-    self._queue = []    
+      self._setup_purge_thread()
+
+  def _setup_purge_thread(self):
+    def purge():
+      while True:
+        dead_contexts = []
+        with self._cv:
+          alive_contexts = []
+          current_time = time.time()
+          for context, last_used_time in self._queue:
+            if current_time - last_used_time > self._wait_seconds:
+              dead_contexts.append(context)
+            else:
+              alive_contexts.append((context, last_used_time))
+          self._queue = alive_contexts
+        for context in dead_contexts:
+          context.stop()
+        gevent.sleep(self._wait_seconds/4.0)       
 
   def _create_context(self):
     # Also ship the Metis zip file so worker nodes can deserialize Metis

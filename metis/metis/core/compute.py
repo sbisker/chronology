@@ -27,7 +27,6 @@ def execute_compute_task(stream_in, start_time, end_time, transforms,
     max_time = max(event['time'] for event in result)
     # TODO(usmanm): Delete events in `stream_out` from `min_time` to `max_time`.
     _KRONOS.put({stream_out: result})
-  result.append(len(spark._MANAGER._queue), x)
   return result
 
 async_execute_compute_task = async(execute_compute_task)
