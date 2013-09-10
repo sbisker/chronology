@@ -1,3 +1,4 @@
+import banyan
 import inspect
 import json
 import re
@@ -42,20 +43,39 @@ def parse(value):
     raise ValueError
   return TRANSFORM_MAP[value['transform']](**value)
 
-def optimize(transforms):
-  has_aggregate = has_groupby = False
-  for transform in transforms:
-    if isinstance(transform, AggregateTransform):
-      has_aggregate = True
-    elif (isinstance(transform, GroupByTransform) or
-          isinstance(transform, GroupByTimeTransform)):
-      has_groupby = True
-  # Only support group operators if an aggregator is being applied afterwards.
+
+def validate(transforms):
   # Transformations in Metis are closed in the sense that any transformed stream
-  # can be dumped back into Kronos.
-  if has_groupby and not has_aggregate:
+  # can be dumped back into Kronos. This requires us to have enforce the
+  # following constraints:
+  # 1. Each AggregateTransform must be preceeded by a GroupByTimeTransform.
+  # 2. Each GroupByTimeTransform must be succeeded by an AggregateTransform.
+  # 3. All GroupByTransforms must appear between a GroupByTimeTransform and
+  #    an AggregateTransform.
+  # 4. Two AggregateTransforms must have a GroupByTimeTransform between them.
+  # 5. Two GroupByTimeTransforms must have an AggregateTransform between them.
+  # TODO(usmanm): Add more static validation of transforms?
+  aggregate = []
+  groupby_time = []
+  groupby = []
+  for i, transform in enumerate(transforms):
+    if isinstance(transform, AggregateTransform):
+      aggregate.append(i)
+    elif isinstance(transform, GroupByTimeTransform):
+      groupby_time.append(i)
+    elif isinstance(transform, GroupByTransform):
+      groupby.append(i)
+  if len(aggregate) != len(groupby_time):
     raise ValueError
-  # TODO(usmanm): Add more optimizations here.
+  intervals = banyan.SortedSet(key_type=(int, int),
+                               updator=banyan.OverlappingIntervalsUpdator)
+  for i, j in zip(aggregate, groupby_time):
+    if i < j:
+      raise ValueError
+    intervals.add((j, i))
+  for i in groupby:
+    if not intervals.overlap_point(i):
+      raise ValueError
   return transforms
 
 
