@@ -21,6 +21,7 @@ def execute_compute_task(stream_in, start_time, end_time, transforms,
     metis_transform = transform.parse(json_transform)
     rdd = metis_transform.apply(rdd)
   result = rdd.collect()
+  rdd.release()
   if stream_out is not None:
     min_time = min(event['time'] for event in result)
     max_time = max(event['time'] for event in result)

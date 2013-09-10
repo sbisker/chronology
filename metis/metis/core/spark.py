@@ -7,12 +7,7 @@ from pyspark.rdd import RDD
 from metis import app
 
 def _patch_rdd():
-  _collect = RDD.collect
-  def collect(self):
-    data = _collect(self)
-    _MANAGER.release_context(self.context)
-    return data
-  RDD.collect = collect
+  RDD.release = lambda rdd: _MANAGER.release_context(rdd.context)
 
 _patch_rdd()
 
