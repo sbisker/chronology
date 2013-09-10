@@ -1,4 +1,5 @@
 import inspect
+import json
 import re
 import sys
 import types
@@ -169,8 +170,8 @@ class GroupByTimeTransform(Transform):
                     int(time - (time % self.time_width) + self.time_width))]
     if bucket is not None:
       # Time bucket should always be first *key*.
-      time_bucket.extend(bucket)
-    return (time_bucket, event)
+      time_bucket.extend(json.loads(bucket))
+    return (json.dumps(time_bucket), event)
 
   def apply(self, rdd):
     return rdd.map(self._map_into_time_buckets)
@@ -241,7 +242,9 @@ class GroupByTransform(Transform):
   def apply(self, rdd):
     def _map(arg):
       bucket, event = _get_key_value(arg)
-      if bucket is None:
+      if bucket:
+        bucket = json.loads(bucket)
+      else:
         bucket = []
       bucket.extend((key, event.get(key)) for key in self.keys)
       return (bucket, event)
@@ -321,7 +324,7 @@ class AggregateTransform(Transform):
         value[new_key] = value[c_key]
         del value[c_key]            
       assert len(buckets) > 0
-      for bucket, bucket_value in buckets:
+      for bucket, bucket_value in json.loads(buckets):
         value[bucket] = bucket_value
       return value
 
