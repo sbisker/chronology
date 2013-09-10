@@ -20,7 +20,7 @@ def execute_compute_task(stream_in, start_time, end_time, transforms,
   metis_transforms = [transform.parse(json_transform)
                       for json_transform in transforms]
   transform.optimize(metis_transforms)
-  for metis_transform in transforms:
+  for metis_transform in metis_transforms:
     rdd = metis_transform.apply(rdd)
   result = rdd.collect()
   rdd.release()

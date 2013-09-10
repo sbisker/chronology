@@ -61,23 +61,23 @@ def test():
   spark_context = spark.get_context()
   rdd = spark_context.parallelize(events)
   op = transform.FilterTransform('$total', 'gt', 140000)
-  rdd = op.apply(spark_context, rdd)
+  rdd = op.apply(rdd)
   print '>>> FILTER', rdd.collect()[:10]
   op = transform.ProjectionTransform(['$total', 'opentable', 'name'])
-  rdd = op.apply(spark_context, rdd)
+  rdd = op.apply(rdd)
   print '>>> PROJECTION', rdd.collect()[:10]
   op = transform.GroupByTimeTransform(864000000000*5)
-  rdd = op.apply(spark_context, rdd)
+  rdd = op.apply(rdd)
   print '>>> TIME BUCKETS', rdd.collect()[:10]
   op = transform.GroupByTransform(['name'])
-  rdd = op.apply(spark_context, rdd)
+  rdd = op.apply(rdd)
   print '>>> GROUPBY', rdd.collect()[:10]
   op = transform.ProjectionTransform(['$total', 'name'])
-  rdd = op.apply(spark_context, rdd)
+  rdd = op.apply(rdd)
   print '>>> PROJECTION', rdd.collect()[:10]
   op = transform.AggregateTransform([{'op': 'count', 'alias': 'event_count'},
                                      {'op': 'sum', 'key': '$total'}])
-  rdd = op.apply(spark_context, rdd)
+  rdd = op.apply(rdd)
   print '>>> AGGREGATE', rdd.collect()[:10]
   rdd.release()
   return jsonify({})
