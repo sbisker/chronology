@@ -40,7 +40,8 @@ class SparkContextManager(object):
           self._queue = alive_contexts
         for context in dead_contexts:
           context.stop()
-        gevent.sleep(self._wait_seconds/4.0)       
+        gevent.sleep(self._wait_seconds/4.0)
+    gevent.spawn_later(self._wait_seconds, purge)
 
   def _create_context(self):
     # Also ship the Metis zip file so worker nodes can deserialize Metis
