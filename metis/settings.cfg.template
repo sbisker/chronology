@@ -1,0 +1,6 @@
+DEBUG = True
+NUM_WORKERS = 20
+KRONOS_SERVER = 'http://localhost:8151'
+SPARK_HOME = 'moo'
+SPARK_MASTER = 'local'
+METIS_ZIP_FILE = 'metis.zip'
