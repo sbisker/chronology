@@ -25,9 +25,10 @@ def get():
   transforms = request_json.get('transforms', [])
   namespace = request_json.get('namespace',
                                app.config['DEFAULT_READ_NAMESPACE'])
-  response = {'status': 'ok'}
-  response.update({
-      'result': compute.execute_compute_task(stream, namespace, start_time,
-                                             end_time, transforms)
-      })
+  response = {
+    'status': 'ok',
+    'result': compute.execute_compute_task(stream, namespace,
+                                           start_time, end_time,
+                                           transforms)
+    }
   return jsonify(response)
