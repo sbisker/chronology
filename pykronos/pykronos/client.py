@@ -6,15 +6,16 @@ import time
 import traceback
 import sys
 
-from threading import Lock
-from threading import Thread
 from collections import defaultdict
 from contextlib import contextmanager
+from threading import Lock
+from threading import Thread
 
 from pykronos.utils.time import kronos_time_now
 
 # These are constants, do not modify them.
 ID_FIELD = '@id'
+ERRORS_FIELD = '@errors'
 TIMESTAMP_FIELD = '@time'
 
 
@@ -24,7 +25,17 @@ class ResultOrder(object):
 
 
 class KronosClientException(Exception):
-  pass
+  def __init__(self, data):
+    if isinstance(data, requests.models.Response):
+      try:
+        message = data.json().get(ERRORS_FIELD)
+      except ValueError:
+        message = None
+        message = '[%d] %s' % (data.status_code,
+                               message or 'Unknown error.')
+    else:
+      message = str(data)
+    super(KronosClientException, self).__init__(message)
 
 
 class KronosClient(object):
@@ -138,13 +149,11 @@ class KronosClient(object):
     
     response = requests.post(self._put_url, data=json.dumps(request_dict))
     if response.status_code != requests.codes.ok:
-      raise KronosClientException('Received response code %s with errors %s' %
-                                  (response.status_code,
-                                   response.json().get('@errors', '')))
+      raise KronosClientException(response)
     response_dict = response.json()
     errors = response_dict.get('@errors')
     if errors:
-      raise KronosClientException('Encountered errors %s' % errors)
+      raise KronosClientException(response)
     return response_dict
 
   def get(self, stream, start_time, end_time, start_id=None, limit=None,
@@ -181,13 +190,13 @@ class KronosClient(object):
                                  data=json.dumps(request_dict),
                                  stream=True)
         if response.status_code != requests.codes.ok:
-          raise KronosClientException('Bad server response code %d' %
-                                      response.status_code)
+          raise KronosClientException(response)
         for line in response.iter_lines():
-          if line:
-            event = json.loads(line)
-            last_id = event[ID_FIELD]
-            yield event
+          if not line:
+            continue
+          event = json.loads(line)
+          last_id = event[ID_FIELD]
+          yield event
         break
       except Exception, e:
         errors.append(e)
@@ -220,12 +229,11 @@ class KronosClient(object):
                              data=json.dumps(request_dict),
                              stream=True)
     if response.status_code != requests.codes.ok:
-      raise KronosClientException('Bad server response code %d' %
-                                  response.status_code)
+      raise KronosClientException(response)
     response_dict = response.json()
     errors = response_dict.get('@errors')
     if errors:
-      raise KronosClientException('Encountered errors %s' % errors)
+      raise KronosClientException(response)
     return response_dict
 
   def get_streams(self, namespace=None):
@@ -240,8 +248,7 @@ class KronosClient(object):
                              data=json.dumps(request_dict),
                              stream=True)
     if response.status_code != requests.codes.ok:
-      raise KronosClientException('Bad server response code %d' %
-                                  response.status_code)
+      raise KronosClientException(response)
     for line in response.iter_lines():
       if line:
         yield json.loads(line)
