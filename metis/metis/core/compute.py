@@ -55,10 +55,15 @@ def _get_kronos_rdd(spark_context, stream, namespace, start_time, end_time):
   return spark_context.parallelize(events)
 
 
-def execute_compute_task(stream_in, namespace, start_time, end_time,
+def execute_compute_task(stream, namespace, start_time, end_time,
                          transforms):
+  if not transforms:
+    # If no transforms, by pass any compute operations and simply pipe
+    # results from Kronos.
+    return KRONOS.get(stream, start_time, end_time, namespace=namespace)
+
   spark_context = CONTEXT_MANAGER.get_context()
-  rdd = _get_kronos_rdd(spark_context, stream_in, namespace, start_time,
+  rdd = _get_kronos_rdd(spark_context, stream, namespace, start_time,
                         end_time)
   for json_transform in transforms:
     metis_transform = transform.parse(json_transform)

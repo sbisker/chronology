@@ -157,7 +157,7 @@ class KronosClient(object):
     return response_dict
 
   def get(self, stream, start_time, end_time, start_id=None, limit=None,
-          order=ResultOrder.ASCENDING, namespace=None):
+          order=ResultOrder.ASCENDING, namespace=None, **kwargs):
     """
     Queries a stream with name `stream` for all events between
     `start_time` and `end_time`.  An optional `start_id` allows the
@@ -181,6 +181,11 @@ class KronosClient(object):
 
     if namespace is not None:
       request_dict['namespace'] = namespace
+
+    # Update `request_dict` with extra kwargs, which may be consumed by
+    # services like Metis which provide an API compliant with Kronos but
+    # can optionally take extra parameters from the client.
+    request_dict.update(kwargs)
     
     errors = []
     last_id = None

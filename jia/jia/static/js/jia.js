@@ -1,7 +1,8 @@
 // Javascript stores `Date` objects with millisecond accuracy. Convert this to
-// the 100ns resolution that Kronos uses.
+// UTC timezone and 100ns resolution that Kronos uses.
 Date.prototype.toKronosTime = function() {
-  return this.getTime() * 10000;
+  var utc = new Date(this.getTime() - this.getTimezoneOffset() * 60000);
+  return utc.getTime() * 10000;
 };
 
 
@@ -265,6 +266,7 @@ jia.directive('timeseriesTable', function($timeout) {
       $scope.headers = _.rest($scope.tabular[0]);
       var rows = $scope.rows = _.rest($scope.tabular);
       _.each(rows, function(row) {
+        console.log(row);
         row[0] = new Date(1000 * row[0]).toDateString();
       });
       $timeout(function() {

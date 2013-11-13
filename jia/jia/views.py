@@ -17,7 +17,8 @@ from pykronos.utils.time import kronos_time_to_datetime
 @app.route('/')
 @require_auth
 def index():
-  return send_from_directory(os.path.join(app.config['APPROOT'], 'jia/static/html'), 'index.html')
+  return send_from_directory(os.path.join(app.config['APPROOT'],
+                                          'jia/static/html'), 'index.html')
 
 @app.route('/get', methods=['POST'])
 @require_auth
@@ -30,10 +31,13 @@ def get():
     properties = frozenset(request.form.getlist('properties[]'))
     start = request.form['start_time']
     end = request.form['end_time']
+    print stream, properties, start, end
 
     # Fetch data from Kronos
     # TODO(meelap): Optimization - pass desired properties to Kronos
-    kronosclient = KronosClient(app.config['KRONOS_URL'], blocking=False)
+    kronosclient = KronosClient(app.config.get('METIS_URL',
+                                               app.config['KRONOS_URL']),
+                                               blocking=False)
     kronosdata = kronosclient.get(stream, start, end)
     
     # Convert events returned by Kronos to a format suitable for rickshaw
@@ -46,7 +50,7 @@ def get():
     for point in kronosdata:
       time = kronos_time_to_datetime(point[TIMESTAMP_FIELD])
       time = int(mktime(time.timetuple()))
-      for key,value in point.iteritems():
+      for key, value in point.iteritems():
         if properties and key not in properties:
           continue
         if not is_kronos_reserved_key(key):

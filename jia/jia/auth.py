@@ -1,4 +1,3 @@
-import re
 from urlparse import urljoin
 from urlparse import urlparse
 
