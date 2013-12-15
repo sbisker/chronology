@@ -4,20 +4,20 @@ from datetime import timedelta
 from dateutil.tz import tzutc
 from pykronos.utils.time import datetime_to_kronos_time
 from pykronos.utils.time import EPOCH
-from metis.convenience.query_primitives import agg
-from metis.convenience.query_primitives import aggop
-from metis.convenience.query_primitives import c
-from metis.convenience.query_primitives import f
-from metis.convenience.query_primitives import jc
-from metis.convenience.query_primitives import jf
-from metis.convenience.query_primitives import join
-from metis.convenience.query_primitives import kstream
-from metis.convenience.query_primitives import p
-from metis.convenience.query_primitives import proj
-from metis.convenience.query_primitives import s
-from metis.convenience.query_primitives import Comparison
-from metis.convenience.query_primitives import JoinPath
-from metis.convenience.query_primitives import TIME
+from metis.core.query.primitives import agg
+from metis.core.query.primitives import aggop
+from metis.core.query.primitives import c
+from metis.core.query.primitives import f
+from metis.core.query.primitives import jc
+from metis.core.query.primitives import jf
+from metis.core.query.primitives import join
+from metis.core.query.primitives import kstream
+from metis.core.query.primitives import p
+from metis.core.query.primitives import proj
+from metis.core.query.primitives import s
+from metis.core.query.primitives import Comparison
+from metis.core.query.primitives import JoinPath
+from metis.core.query.primitives import TIME
 
 
 class DateUnit(object):

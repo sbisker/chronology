@@ -13,18 +13,18 @@ from datetime import timedelta
 from dateutil.tz import tzutc
 from metis import app
 from metis.convenience.cohort import cohort_queryplan
-from metis.convenience.query_primitives import agg
-from metis.convenience.query_primitives import aggop
-from metis.convenience.query_primitives import c
-from metis.convenience.query_primitives import f
-from metis.convenience.query_primitives import filt_cond
-from metis.convenience.query_primitives import filt
-from metis.convenience.query_primitives import kstream
-from metis.convenience.query_primitives import p
-from metis.convenience.query_primitives import proj
-from metis.convenience.query_primitives import Comparison
-from metis.convenience.query_primitives import ID
-from metis.convenience.query_primitives import TIME
+from metis.core.query.primitives import agg
+from metis.core.query.primitives import aggop
+from metis.core.query.primitives import c
+from metis.core.query.primitives import f
+from metis.core.query.primitives import filt_cond
+from metis.core.query.primitives import filt
+from metis.core.query.primitives import kstream
+from metis.core.query.primitives import p
+from metis.core.query.primitives import proj
+from metis.core.query.primitives import Comparison
+from metis.core.query.primitives import ID
+from metis.core.query.primitives import TIME
 from pykronos import KronosClient
 from pykronos.utils.time import datetime_to_kronos_time
 from random import randint
@@ -97,7 +97,7 @@ class GetTest(EndpointTest):
             agg([f('round_time_down', [p('@time'), c('100')], alias='@time'),
                  p('group3')],
                 [aggop('sum', [p('value')], alias='sum_of_values')])]
-               
+    print plan
     response = requests.post('%s/1.0/query' % self._metis_url,
                              data=json.dumps({'plan': plan}),
                              stream=True)
@@ -230,8 +230,8 @@ if __name__ == '__main__':
     ]:
     print 'Testing %s' % (test.description())
     print '...generating data'
-    test.clear_data()
-    test.generate_data()
+#    test.clear_data()
+#    test.generate_data()
     print '...running test'
     test.run_test()
-    test.clear_data()  
+#    test.clear_data()  
