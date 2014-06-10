@@ -3,9 +3,9 @@ import gevent
 import time
 
 from kronos.core.validators import ID_FIELD, TIMESTAMP_FIELD
-from kronos.storage.backends import BaseStorage
-from kronos.storage.backends.elasticsearch.connection import ElasticSearchConnection
-from kronos.utils.cache import InMemoryLRUCache
+from kronos.storage.base import BaseStorage
+from kronos.storage.elasticsearch.connection import ElasticSearchConnection
+from kronos.common.cache import InMemoryLRUCache
 
 class ElasticSearchStorage(BaseStorage):
   def __init__(self, name, **settings):

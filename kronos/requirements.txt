@@ -7,3 +7,4 @@ werkzeug==0.9.4
 python-dateutil==2.2
 requests==2.2.1
 uwsgi==2.0.1
+python-cjson

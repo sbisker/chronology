@@ -1,1 +1,1 @@
-from kronos.storage.backends.elasticsearch.client import ElasticSearchStorage
+from kronos.storage.elasticsearch.client import ElasticSearchStorage
