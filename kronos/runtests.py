@@ -59,7 +59,7 @@ def test_against(*configs):
   return decorator
 
 
-@test_against('memory', 'cassandra')
+@test_against('memory', 'cassandra', 'elasticsearch')
 def test_common():
   test_suites = unittest.defaultTestLoader.discover(
     start_dir=os.path.join(os.path.dirname(__file__), 'tests/common'),
