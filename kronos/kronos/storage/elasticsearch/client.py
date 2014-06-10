@@ -7,6 +7,8 @@ from kronos.storage.base import BaseStorage
 from kronos.storage.elasticsearch.connection import ElasticSearchConnection
 from kronos.common.cache import InMemoryLRUCache
 
+DOT = u'\uFF0E'
+
 class ElasticSearchStorage(BaseStorage):
   def __init__(self, name, **settings):
     super(ElasticSearchStorage, self).__init__(name, **settings)
@@ -71,6 +73,7 @@ class ElasticSearchStorage(BaseStorage):
         # seconds.
         gevent.sleep(self.rollover_check_period) 
         r = self.http.request('GET', '/%s/_count' % self.event_index)
+        #?? does the count reset with index change?
         if r.json.get('error') or r.json['count'] <= self.rollover_size:
           # Index not yet created or index not big enough to roll over?
           continue
@@ -98,11 +101,11 @@ class ElasticSearchStorage(BaseStorage):
     '''
     for key in event.keys():
       if insert:
-        new_key = key.replace('.', u'\uFF0E')
+        new_key = key.replace('.', DOT)
       else:
-        new_key = key.replace(u'\uFF0E', '.')
+        new_key = key.replace(DOT, '.')
       if isinstance(event[key], dict):
-        event[new_key] = self.clean_dots(event[key])
+        event[new_key] = self.transform_events(event[key])
       else:
         event[new_key] = event[key]
       if new_key != key:
