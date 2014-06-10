@@ -115,7 +115,7 @@ class ElasticSearchStorage(BaseStorage):
   def get_alias(self, time):
     return (int(time) / self.alias_period) * self.alias_period
         
-  def _insert(self, stream, events, configuration):
+  def _insert(self, namesapce, stream, events, configuration):
     bulk = []
     aliases = set()
     for event in events:
@@ -136,7 +136,8 @@ class ElasticSearchStorage(BaseStorage):
             for alias in aliases
             ]}))
   
-  def _retrieve(self, stream, start_id, end_time, configuration):
+  def _retrieve(self, namespace, stream, 
+      start_id, end_time, configuration):
     start_time = (start_id.time - 0x01b21dd213814000L) * 100 / 1e9
     query = {
       'query': {
