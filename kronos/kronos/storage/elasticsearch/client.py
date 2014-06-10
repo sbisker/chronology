@@ -1,5 +1,5 @@
 import cjson
-import gevent
+import gevent 
 import time
 
 from kronos.core.validators import ID_FIELD, TIMESTAMP_FIELD
@@ -87,9 +87,9 @@ class ElasticSearchStorage(BaseStorage):
   def is_alive(self):
     try:
       self.http.request('GET', '/')
+      return True
     except:
       return False
-    return True
 
   def transform_event(self, event, insert=False):
     '''
@@ -115,7 +115,7 @@ class ElasticSearchStorage(BaseStorage):
   def get_alias(self, time):
     return (int(time) / self.alias_period) * self.alias_period
         
-  def insert(self, stream, events, configuration):
+  def _insert(self, stream, events, configuration):
     bulk = []
     aliases = set()
     for event in events:
@@ -196,4 +196,10 @@ class ElasticSearchStorage(BaseStorage):
         if (event[TIMESTAMP_FIELD], event[ID_FIELD]) <= (start_time, start_id):
           continue
         yield self.transform_event(event, insert=False)
-        events_fetched_so_far += 1        
+        events_fetched_so_far += 1  
+
+  def _streams(self, namespace):
+    pass #TODO
+
+  def _delete(self, namespace, stream, start_id, end_time, configuration):
+    pass #TODO
