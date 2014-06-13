@@ -190,7 +190,7 @@ class TestKronosAPIs(KronosServerTestCase):
     self.assertEqual(len(events), 1)
     self.assertEqual(events[0][ID_FIELD], start_id)    
 
-  def _test_streams(self):
+  def test_streams(self):
     streams = {}
     for i in range(10):
       n = random.randint(1, 1000)
@@ -205,7 +205,7 @@ class TestKronosAPIs(KronosServerTestCase):
       n = stream.replace('TestKronosAPIs_test_streams_', '')
       self.assertEqual(set(properties), {n, 'lol'})
 
-  def _test_namespaces(self):
+  def test_namespaces(self):
     namespace1 = 'namespace1'
     namespace2 = 'namespace2'
     stream = 'TestKronosAPIs_test_namespaces'

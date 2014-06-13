@@ -8,6 +8,7 @@ from collections import defaultdict
 from uuid import UUID
 from elasticsearch import Elasticsearch
 from elasticsearch import helpers as es_helpers
+from elasticsearch.client.utils import _make_path #TODO pull request
 
 from kronos.conf.constants import ID_FIELD, TIMESTAMP_FIELD
 from kronos.conf.constants import ResultOrder
@@ -70,7 +71,8 @@ class ElasticSearchStorage(BaseStorage):
     super(ElasticSearchStorage, self).__init__(name, **settings)
     self.db = defaultdict(lambda: defaultdict(list))
     self.force_refresh = settings['force_refresh']
-  
+    self.alias_cache = InMemoryLRUCache() # 1000 entry LRU cache.
+ 
     self.setup_elasticsearch()
 
   def setup_elasticsearch(self):
@@ -111,6 +113,12 @@ class ElasticSearchStorage(BaseStorage):
         del event[key]
     return event
 
+  def get_alias(self, time):
+    return (int(time) / self.alias_period) * self.alias_period
+  
+  def get_alias_name(self, alias):
+    return "%s%s_alias" % (self.event_index_prefix, alias)
+
   def _insert(self, namespace, stream, events, configuration):
     """
     `namespace` acts as db for different streams
@@ -119,16 +127,31 @@ class ElasticSearchStorage(BaseStorage):
     """
     #for testing
     self._mem_insert(namespace, stream, events, configuration)
-
+    aliases = set([])
     for event in events:
+      alias = self.get_alias(event[TIMESTAMP_FIELD])
+      try:
+        self.alias_cache.get(alias)
+      except KeyError:
+        aliases.add(self.get_alias_name(alias))
+        self.alias_cache.set(alias, None)
+
       event = self.transform_event(event, insert=True)
       event['_index'] = namespace
       event['_type'] = stream
       event['_id'] = event[ID_FIELD]
     
-    #print 'insert', events
+    if len(aliases) > 0:
+      actions = [{
+      'add' : {
+          'index': namespace,
+          'alias': alias
+          }
+      } for alias in aliases]
+    #TODO pull request to library
+      self.es.transport.perform_request('POST', _make_path(None, '_aliases'), body={'actions':actions}, params={'ignore':404}) 
+    
     es_helpers.bulk(self.es, events, refresh=self.force_refresh)
-
 
   def _mem_insert(self, namespace, stream, events, configuration):
     max_items = configuration.get('max_items', self.default_max_items)  
@@ -138,9 +161,42 @@ class ElasticSearchStorage(BaseStorage):
       bisect.insort(self.db[namespace][stream], Event(event))
     
   def _delete(self, namespace, stream, start_id, end_time, configuration):
-    self._mem_delete(namespace, stream, start_id,
+    count = self._mem_delete(namespace, stream, start_id,
         end_time, configuration)
-
+    
+    start_time = uuid_to_kronos_time(start_id)
+    body_query = {
+          'query': {
+            'filtered': {
+              'query': { 'match_all': {}},
+              'filter': {
+                'range': {
+                  TIMESTAMP_FIELD: {
+                    'gte': start_time,
+                    'lte': end_time,
+                   }
+              },
+              #'not': {
+              #    'term': {
+              #        ID_FIELD: str(start_id)
+              #    } 
+              # }
+            }  
+          }
+        }
+      }
+   
+    res = self.es.delete_by_query(index=namespace,
+                  doc_type=stream,
+                  body=body_query,
+                  ignore=404,
+                  ignore_indices=True)
+    
+    status = res.get('status')
+    if res is not None and res != 200:
+      return 0
+    return res
+  
   def _mem_delete(self, namespace, stream, start_id, end_time, configuration):
     """
     Delete events with id > `start_id` and end_time <= `end_time`.
@@ -171,8 +227,9 @@ class ElasticSearchStorage(BaseStorage):
    
     start_time = uuid_to_kronos_time(start_id)
     body_query = {
-          'query': {
+          'query' : {
             'filtered': {
+              'query': { 'match_all': {}},
               'filter': {
                 'range': {
                   TIMESTAMP_FIELD: {
@@ -185,25 +242,39 @@ class ElasticSearchStorage(BaseStorage):
         }
       }
     sort_query=["%s:%s" % (TIMESTAMP_FIELD, ResultOrder.get_short_name(order)), ID_FIELD] 
-    res = self.es.search(index=namespace,
-                   doc_type=stream,
+    aliases = []
+    alias = self.get_alias(start_time)
+    while not True:
+      aliases.append(self.get_alias_name(alias))
+      alias += self.alias_period
+      if alias > end_time:
+        break
+    
+    fetched_count = 0
+    while True:
+      res = self.es.search(index=namespace,
+                  doc_type=stream,
                   size=limit,
                   body=body_query,
-                  ignore=404,
                   sort=sort_query,
+                  from_=fetched_count,
+                  ignore=[400, 404],
                   ignore_indices=True)
-    #TODO pagination
-    hits = res.get('hits', {}).get('hits')
-   # print 'retrieve',  hits
-    if hits is None or not len(hits):
-      return
-    if hits[0]['_source'][ID_FIELD] == str(start_id):
-      hits = hits[1:]
+      hits = res.get('hits', {}).get('hits')
+      if not hits:
+        return
+      
+      if hits[0]['_source'][ID_FIELD] == str(start_id):
+        hits = hits[1:]
+        fetched_count += 1
 
-    for hit in hits:
-      event = hit['_source']
-      yield self.transform_event(event)
-  
+      for hit in hits:
+        event = hit['_source']
+        if (event[TIMESTAMP_FIELD], event[ID_FIELD]) <= (start_time, start_id):
+          continue  
+        yield self.transform_event(event)
+        fetched_count += 1 
+         
   def _mem_retrieve(self, namespace, stream, start_id, 
       end_time, order, limit, configuration):
     """
@@ -237,6 +308,19 @@ class ElasticSearchStorage(BaseStorage):
       yield stream_events[i]
 
   def _streams(self, namespace):
+    mem_stream = self._mem_streams(namespace)
+    res = self.es.indices.get_mapping(index=namespace,
+                        ignore=404,
+                        allow_no_indices=True,
+                        ignore_unavailable=True)
+    if namespace not in res:
+      return
+    streams = res[namespace]['mappings']
+    for key in streams.iterkeys():
+      if key != "_default_":
+        yield key
+
+  def _mem_streams(self, namespace):
     return self.db[namespace].iterkeys()
 
   def _clear(self):
