@@ -138,6 +138,10 @@ class ElasticSearchStorage(BaseStorage):
       bisect.insort(self.db[namespace][stream], Event(event))
     
   def _delete(self, namespace, stream, start_id, end_time, configuration):
+    self._mem_delete(namespace, stream, start_id,
+        end_time, configuration)
+
+  def _mem_delete(self, namespace, stream, start_id, end_time, configuration):
     """
     Delete events with id > `start_id` and end_time <= `end_time`.
     """

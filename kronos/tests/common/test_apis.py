@@ -149,7 +149,7 @@ class TestKronosAPIs(KronosServerTestCase):
     # `start_time` < 0 and `end_time` < 0
     self.assertEqual(len(self.get(stream, -2000, -1000)), 0)
 
-  def _test_delete(self):
+  def test_delete(self):
     stream = 'TestKronosAPIs_test_delete'
     event1 = [{'a': 1, TIMESTAMP_FIELD: 1}]
     event2 = [{'a': 3, TIMESTAMP_FIELD: 2}]
