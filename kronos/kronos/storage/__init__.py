@@ -20,7 +20,7 @@ class StorageRouter(object):
                                               InMemoryLRUCache(max_items=500))
     self.namespaces = settings.namespace_to_streams_configuration.keys()
     self.load_backends()
-    self.load_prefix_configurations()
+    self.load_prefix_configurations()       
 
   def load_backends(self):
     """
@@ -36,7 +36,7 @@ class StorageRouter(object):
       self.backends[name] = backend_constructor(name,
                                                 namespaces=self.namespaces,
                                                 **backend_settings)
-
+  
   def get_backend(self, name):
     try:
       return self.backends[name]

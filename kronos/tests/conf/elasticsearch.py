@@ -1,15 +1,22 @@
 storage = {
     'elasticsearch' : {
       'backend' : 'elasticsearch.ElasticSearchStorage',
-      'hosts' : ['localhost'],
+      'hosts' : [
+        {
+          'host' : 'localhost',
+          'port' : 9200
+          },
+      ],
       'keyspace_prefix' : 'kronos_test',
       'cas_index' : 'TODO',
-      'event_index_prefix' : 'TODO',
+      'event_index_template': 'kronos',
+      'event_index_prefix' : 'kronos',
       'rollover_size' : 10000, #?
       'rollover_check_period_seconds' : 10, #?
       'read_size' : 5000, #?
       'alias_period' : 5, #?
       'default_max_items' : 1000, #rm
+      'force_refresh': True,
       }
 }
 
@@ -18,9 +25,9 @@ default_namespace = 'kronos'
 _default_stream_configuration = {
       '': {
             'backends': {
-                    'memory': None
+                    'elasticsearch': None
                           },
-                'read_backend': 'memory'
+                'read_backend': 'elasticsearch'
                     }
         }
 

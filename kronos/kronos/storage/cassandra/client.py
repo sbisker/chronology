@@ -135,3 +135,8 @@ class CassandraStorage(BaseStorage):
   def _streams(self, namespace):
     for stream_name in self.namespaces[namespace].list_streams():
       yield stream_name
+
+  def _clear(self):
+    for namespace in self.namespaces.itervalues():
+      namespace.drop()
+

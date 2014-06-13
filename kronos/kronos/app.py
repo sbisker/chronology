@@ -12,7 +12,7 @@ import kronos
 from kronos.core.validators import validate_settings
 from kronos.conf import settings; validate_settings(settings)
 
-from kronos.conf.constants import ResultOrder
+from kronos.conf.constants import ResultOrder, DEFAULT_LIMIT
 from kronos.core.validators import validate_event
 from kronos.core.validators import validate_stream
 from kronos.storage import router
@@ -140,7 +140,7 @@ def get_events(environment, start_response, headers):
     return
 
   namespace = request_json.get('namespace', settings.default_namespace)
-  limit = int(request_json.get('limit', sys.maxint))
+  limit = int(request_json.get('limit', DEFAULT_LIMIT))
   if limit <= 0:
     events_from_backend = []
   else:

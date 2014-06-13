@@ -120,3 +120,7 @@ class InMemoryStorage(BaseStorage):
 
   def _streams(self, namespace):
     return self.db[namespace].iterkeys()
+
+  def _clear(self):
+    self.db = defaultdict(lambda: defaultdict(list))
+

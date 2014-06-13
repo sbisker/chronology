@@ -1,14 +1,23 @@
 import bisect
 
+import cjson
+import gevent
+import time
+
 from collections import defaultdict
 from uuid import UUID
+from elasticsearch import Elasticsearch
+from elasticsearch import helpers as es_helpers
 
-from kronos.conf.constants import ID_FIELD
+from kronos.conf.constants import ID_FIELD, TIMESTAMP_FIELD
 from kronos.conf.constants import ResultOrder
 from kronos.storage.base import BaseStorage
-from kronos.utils.math import uuid_from_kronos_time
+from kronos.utils.math import uuid_from_kronos_time, uuid_to_kronos_time
 from kronos.utils.math import UUIDType
 
+from kronos.common.cache import InMemoryLRUCache
+
+DOT = u'\uFF0E'
 
 class Event(dict):
   """
@@ -44,30 +53,84 @@ class ElasticSearchStorage(BaseStorage):
   pos_int = lambda x: int(x) > 0
   SETTINGS_VALIDATORS = {
     'default_max_items': pos_int,
-    'hosts': lambda x: isinstance(x, list),
+    'hosts': lambda x: len(x) > 0,
     'keyspace_prefix': valid_str,
     'cas_index': valid_str,
+    'event_index_template': valid_str,
     'event_index_prefix': valid_str,
     'rollover_size': pos_int,
     'rollover_check_period_seconds': pos_int,
     'read_size': pos_int,
     'alias_period': pos_int,
     'default_max_items': pos_int,
+    'force_refresh': lambda x: isinstance(x, bool),
   }
   
   def __init__(self, name, **settings):
     super(ElasticSearchStorage, self).__init__(name, **settings)
     self.db = defaultdict(lambda: defaultdict(list))
+    self.force_refresh = settings['force_refresh']
+  
+    self.setup_elasticsearch()
+
+  def setup_elasticsearch(self):
+    self.es = Elasticsearch(hosts=self.hosts)
+ 
+    # Load index template.
+    template = open('%s/index.template' %
+                    '/'.join(__file__.split('/')[:-1])).read()
+    template = template.replace('{{ id_field }}', ID_FIELD)
+    template = template.replace('{{ timestamp_field }}', TIMESTAMP_FIELD)
+    template = template.replace('{{ event_index_prefix }}',
+                                self.event_index_prefix)
+
+    # Always update template (in case it's missing, or it was updated).
+    self.es.indices.put_template(name=self.event_index_template, body=template)
 
   def is_alive(self):
-    return True
-  
+    return self.es.ping()
+
+  def transform_event(self, event, insert=False):
+    '''
+    Recursively cleans keys in ``event`` by replacing `.` with its Unicode full
+    width equivalent. ElasticSearch uses dot notation for naming nested fields
+    and so having dots in field names can potentially lead to issues. (Note that
+    Shay Bannon says field names with dots should be avoided even though
+    they *will work* :/)
+    '''
+    for key in event.keys():
+      if insert:
+        new_key = key.replace('.', DOT)
+      else:
+        new_key = key.replace(DOT, '.')
+      if isinstance(event[key], dict):
+        event[new_key] = self.transform_events(event[key])
+      else:
+        event[new_key] = event[key]
+      if new_key != key:
+        del event[key]
+    return event
+
   def _insert(self, namespace, stream, events, configuration):
     """
+    `namespace` acts as db for different streams
     `stream` is the name of a stream and `events` is a list of events to
-    insert. Make room for the events to insert if necessary by deleting the
-    oldest events. Then insert each event in time sorted order.
+    insert.
     """
+    #for testing
+    self._mem_insert(namespace, stream, events, configuration)
+
+    for event in events:
+      event = self.transform_event(event, insert=True)
+      event['_index'] = namespace
+      event['_type'] = stream
+      event['_id'] = event[ID_FIELD]
+    
+    #print 'insert', events
+    es_helpers.bulk(self.es, events, refresh=self.force_refresh)
+
+
+  def _mem_insert(self, namespace, stream, events, configuration):
     max_items = configuration.get('max_items', self.default_max_items)  
     for event in events:
       while len(self.db[namespace][stream]) >= max_items:
@@ -96,8 +159,49 @@ class ElasticSearchStorage(BaseStorage):
     del stream_events[lo:hi]
     return max(0, hi - lo)
 
-  def _retrieve(self, namespace, stream, start_id, end_time, order, limit,
-                configuration):
+  def _retrieve(self, namespace, stream, start_id, 
+      end_time, order, limit, configuration):
+      
+    items =  self._mem_retrieve(namespace, stream, start_id, end_time, 
+          order, limit, configuration) 
+   
+    start_time = uuid_to_kronos_time(start_id)
+    body_query = {
+          'query': {
+            'filtered': {
+              'filter': {
+                'range': {
+                  TIMESTAMP_FIELD: {
+                    'gte': start_time,
+                    'lte': end_time,
+                }
+              }
+            }  
+          }
+        }
+      }
+    sort_query=["%s:%s" % (TIMESTAMP_FIELD, ResultOrder.get_short_name(order)), ID_FIELD] 
+    res = self.es.search(index=namespace,
+                   doc_type=stream,
+                  size=limit,
+                  body=body_query,
+                  ignore=404,
+                  sort=sort_query,
+                  ignore_indices=True)
+    #TODO pagination
+    hits = res.get('hits', {}).get('hits')
+   # print 'retrieve',  hits
+    if hits is None or not len(hits):
+      return
+    if hits[0]['_source'][ID_FIELD] == str(start_id):
+      hits = hits[1:]
+
+    for hit in hits:
+      event = hit['_source']
+      yield self.transform_event(event)
+  
+  def _mem_retrieve(self, namespace, stream, start_id, 
+      end_time, order, limit, configuration):
     """
     Yield events from stream starting after the event with id `start_id` until
     and including events with timestamp `end_time`.
@@ -130,3 +234,6 @@ class ElasticSearchStorage(BaseStorage):
 
   def _streams(self, namespace):
     return self.db[namespace].iterkeys()
+
+  def _clear(self):
+    self.es.indices.delete(index='_all')
