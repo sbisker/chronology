@@ -16,8 +16,6 @@ from kronos.storage.base import BaseStorage
 from kronos.utils.math import uuid_from_kronos_time, uuid_to_kronos_time
 from kronos.utils.math import UUIDType
 
-from kronos.common.cache import InMemoryLRUCache
-
 DOT = u'\uFF0E'
 
 class Event(dict):
@@ -62,7 +60,6 @@ class ElasticSearchStorage(BaseStorage):
     'rollover_size': pos_int,
     'rollover_check_period_seconds': pos_int,
     'read_size': pos_int,
-    'alias_period': pos_int,
     'default_max_items': pos_int,
     'force_refresh': lambda x: isinstance(x, bool),
   }
@@ -71,7 +68,6 @@ class ElasticSearchStorage(BaseStorage):
     super(ElasticSearchStorage, self).__init__(name, **settings)
     self.db = defaultdict(lambda: defaultdict(list))
     self.force_refresh = settings['force_refresh']
-    self.alias_cache = InMemoryLRUCache() # 1000 entry LRU cache.
  
     self.setup_elasticsearch()
 
@@ -113,12 +109,6 @@ class ElasticSearchStorage(BaseStorage):
         del event[key]
     return event
 
-  def get_alias(self, time):
-    return (int(time) / self.alias_period) * self.alias_period
-  
-  def get_alias_name(self, namespace, alias):
-    return "%s%s_alias" % (namespace, alias)
-
   def _insert(self, namespace, stream, events, configuration):
     """
     `namespace` acts as db for different streams
@@ -129,13 +119,6 @@ class ElasticSearchStorage(BaseStorage):
     self._mem_insert(namespace, stream, events, configuration)
     aliases = set([])
     for event in events:
-      alias = self.get_alias(event[TIMESTAMP_FIELD])
-      try:
-        self.alias_cache.get(alias)
-      except KeyError:
-        aliases.add(self.get_alias_name(namespace, alias))
-        self.alias_cache.set(alias, None)
-
       event = self.transform_event(event, insert=True)
       event['_index'] = namespace
       event['_type'] = stream
@@ -143,16 +126,6 @@ class ElasticSearchStorage(BaseStorage):
       
     es_helpers.bulk(self.es, events, refresh=self.force_refresh)
 
-    if len(aliases) > 0:
-      actions = [{
-      'add' : {
-          'index': namespace,
-          'alias': alias
-          }
-      } for alias in aliases]
-    #TODO pull request to library
-      res = self.es.transport.perform_request('POST', _make_path(None, '_aliases'), body={'actions': actions}, params={'ignore': 404}) 
-    
   def _mem_insert(self, namespace, stream, events, configuration):
     max_items = configuration.get('max_items', self.default_max_items)  
     for event in events:
@@ -242,18 +215,10 @@ class ElasticSearchStorage(BaseStorage):
         }
       }
     sort_query=["%s:%s" % (TIMESTAMP_FIELD, ResultOrder.get_short_name(order)), ID_FIELD] 
-    aliases = []
-    alias = self.get_alias(start_time)
-    while True:
-      aliases.append(self.get_alias_name(namespace, alias))
-      alias += self.alias_period
-      if alias > end_time:
-        break
     
     fetched_count = 0
-    alias_query = ",".join(aliases)
     while True:
-      res = self.es.search(index=alias_query,
+      res = self.es.search(index=namespace,
                   doc_type=stream,
                   size=limit,
                   body=body_query,
