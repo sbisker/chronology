@@ -248,7 +248,6 @@ class ElasticSearchStorage(BaseStorage):
       aliases.append(self.get_alias_name(namespace, alias))
       alias += self.alias_period
       if alias > end_time:
-        print stream, end_time
         break
     
     fetched_count = 0
