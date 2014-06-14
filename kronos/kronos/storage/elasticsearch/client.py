@@ -116,8 +116,8 @@ class ElasticSearchStorage(BaseStorage):
   def get_alias(self, time):
     return (int(time) / self.alias_period) * self.alias_period
   
-  def get_alias_name(self, alias):
-    return "%s%s_alias" % (self.event_index_prefix, alias)
+  def get_alias_name(self, namespace, alias):
+    return "%s%s_alias" % (namespace, alias)
 
   def _insert(self, namespace, stream, events, configuration):
     """
@@ -133,14 +133,16 @@ class ElasticSearchStorage(BaseStorage):
       try:
         self.alias_cache.get(alias)
       except KeyError:
-        aliases.add(self.get_alias_name(alias))
+        aliases.add(self.get_alias_name(namespace, alias))
         self.alias_cache.set(alias, None)
 
       event = self.transform_event(event, insert=True)
       event['_index'] = namespace
       event['_type'] = stream
       event['_id'] = event[ID_FIELD]
-    
+      
+    es_helpers.bulk(self.es, events, refresh=self.force_refresh)
+
     if len(aliases) > 0:
       actions = [{
       'add' : {
@@ -149,10 +151,8 @@ class ElasticSearchStorage(BaseStorage):
           }
       } for alias in aliases]
     #TODO pull request to library
-      self.es.transport.perform_request('POST', _make_path(None, '_aliases'), body={'actions':actions}, params={'ignore':404}) 
+      res = self.es.transport.perform_request('POST', _make_path(None, '_aliases'), body={'actions': actions}, params={'ignore': 404}) 
     
-    es_helpers.bulk(self.es, events, refresh=self.force_refresh)
-
   def _mem_insert(self, namespace, stream, events, configuration):
     max_items = configuration.get('max_items', self.default_max_items)  
     for event in events:
@@ -244,15 +244,17 @@ class ElasticSearchStorage(BaseStorage):
     sort_query=["%s:%s" % (TIMESTAMP_FIELD, ResultOrder.get_short_name(order)), ID_FIELD] 
     aliases = []
     alias = self.get_alias(start_time)
-    while not True:
-      aliases.append(self.get_alias_name(alias))
+    while True:
+      aliases.append(self.get_alias_name(namespace, alias))
       alias += self.alias_period
       if alias > end_time:
+        print stream, end_time
         break
     
     fetched_count = 0
+    alias_query = ",".join(aliases)
     while True:
-      res = self.es.search(index=namespace,
+      res = self.es.search(index=alias_query,
                   doc_type=stream,
                   size=limit,
                   body=body_query,

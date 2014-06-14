@@ -14,7 +14,7 @@ storage = {
       'rollover_size' : 10000, #?
       'rollover_check_period_seconds' : 10, #?
       'read_size' : 5000, #?
-      'alias_period' : 5, #?
+      'alias_period' : 50, #?
       'default_max_items' : 1000, #rm
       'force_refresh': True,
       }
