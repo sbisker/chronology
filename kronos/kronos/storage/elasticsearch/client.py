@@ -117,7 +117,6 @@ class ElasticSearchStorage(BaseStorage):
     """
     #for testing
     self._mem_insert(namespace, stream, events, configuration)
-    aliases = set([])
     for event in events:
       event = self.transform_event(event, insert=True)
       event['_index'] = namespace
