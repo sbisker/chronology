@@ -140,28 +140,31 @@ class ElasticSearchStorage(BaseStorage):
             'filtered': {
               'query': { 'match_all': {}},
               'filter': {
-                'range': {
-                  TIMESTAMP_FIELD: {
-                    'gte': start_time,
-                    'lte': end_time,
-                   }
-              },
-              #'not': {
-              #    'term': {
-              #        ID_FIELD: str(start_id)
-              #    } 
-              # }
-            }  
+                'and' : [
+                  { 'range': {
+                    TIMESTAMP_FIELD: {
+                      'gte': start_time,
+                      'lte': end_time,
+                      }
+                    }
+                  },
+                  { 'not': {
+                      'term': {
+                          ID_FIELD: str(start_id)
+                     } 
+                    }
+                  }
+                ]
+              }  
+            } 
           }
         }
-      }
-   
+    
     res = self.es.delete_by_query(index=namespace,
                   doc_type=stream,
                   body=body_query,
                   ignore=404,
                   ignore_indices=True)
-    
     status = res.get('status')
     #TODO!!
     if res is not None and res != 200:
