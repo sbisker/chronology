@@ -32,6 +32,9 @@ module.factory('barchart', function () {
       this.data = data;
       var error = false;
 
+      // In the future, this may be an option in the query builder
+      var stacked = true;
+
       var groups = [];
       var series = _.groupBy(data.events, function(event) {
         return event['@group'] || '';
@@ -56,12 +59,10 @@ module.factory('barchart', function () {
           // On first iteration, save the categories list
           if (i == 0) {
             categories = cats;
-            groups.push(event['@group']);
           }
           // On all other iterations, check to make sure the categories
           // are consistent
           else {
-            console.log(categories, cats);
             if (!_.isEqual(categories, cats)) {
               msg.error("All groups must have the same labels");
               error = true;
@@ -74,6 +75,11 @@ module.factory('barchart', function () {
           // C3 expects the group name to be the first item in the array
           // followed by all the data points
           data.unshift(events[0]['@group']);
+
+          if (stacked) {
+            groups.push(events[0]['@group']);
+          }
+
           return data;
         });
       } else {
