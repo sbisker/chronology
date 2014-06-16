@@ -1,6 +1,6 @@
 ID_FIELD = '@id'
 TIMESTAMP_FIELD = '@time'
-DEFAULT_LIMIT = (1<<16) -1
+DEFAULT_LIMIT = (1<<24) -1
 
 class ResultOrder(object):
   ASCENDING = 'ascending'
