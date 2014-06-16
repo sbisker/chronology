@@ -6,10 +6,11 @@ from kronos.conf.constants import ResultOrder
 from kronos.storage.base import BaseStorage
 from kronos.utils.math import uuid_to_kronos_time
 
-DOT = u'\uFF0E'
-
 import logging
 logger = logging.getLogger('elasticsearch').addHandler(logging.StreamHandler())
+
+DOT = u'\uFF0E'
+MAX_LIMIT = (1<<24) -1
 
 class ElasticSearchStorage(BaseStorage):
   valid_str = lambda x: len(str(x)) > 0
@@ -155,9 +156,10 @@ class ElasticSearchStorage(BaseStorage):
     
     fetched_count = 0
     while True:
+      limit_chunk = min(limit, MAX_LIMIT)
       res = self.es.search(index=namespace,
                   doc_type=stream,
-                  size=limit,
+                  size=limit_chunk,
                   body=body_query,
                   sort=sort_query,
                   from_=fetched_count,
@@ -176,7 +178,11 @@ class ElasticSearchStorage(BaseStorage):
         if (event[TIMESTAMP_FIELD], event[ID_FIELD]) <= (start_time, start_id):
           continue  
         yield self.transform_event(event)
-        fetched_count += 1 
+        fetched_count += 1
+      
+      limit -= limit_chunk
+      if limit == 0:
+        return
          
   def _streams(self, namespace):
     res = self.es.indices.get_mapping(index=namespace,

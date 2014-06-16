@@ -1,6 +1,7 @@
 import uuid
+import sys
 
-from kronos.conf.constants import ResultOrder, DEFAULT_LIMIT
+from kronos.conf.constants import ResultOrder
 from kronos.utils.math import uuid_from_kronos_time
 from kronos.utils.math import uuid_to_kronos_time
 from kronos.utils.math import UUIDType
@@ -50,7 +51,7 @@ class BaseStorage(object):
                               self.__class__.__name__)
 
   def retrieve(self, namespace, stream, start_time, end_time, start_id,
-               configuration, order=ResultOrder.ASCENDING, limit=DEFAULT_LIMIT):
+               configuration, order=ResultOrder.ASCENDING, limit=sys.maxint):
     """
     Retrieves all the events for `stream` from `start_time` (inclusive) till
     `end_time` (inclusive). Alternatively to `start_time`, `start_id` can be 
