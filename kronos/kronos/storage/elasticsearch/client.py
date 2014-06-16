@@ -8,7 +8,6 @@ from collections import defaultdict
 from uuid import UUID
 from elasticsearch import Elasticsearch
 from elasticsearch import helpers as es_helpers
-from elasticsearch.client.utils import _make_path #TODO pull request
 
 from kronos.conf.constants import ID_FIELD, TIMESTAMP_FIELD
 from kronos.conf.constants import ResultOrder
@@ -43,11 +42,6 @@ class Event(dict):
     return 0
 
 class ElasticSearchStorage(BaseStorage):
-  """
-  The in memory storage backend maintains a sorted list of events per stream
-  name.
-  The size of this list is capped at `max_items` per stream.
-  """
   valid_str = lambda x: len(str(x)) > 0
   pos_int = lambda x: int(x) > 0
   SETTINGS_VALIDATORS = {
@@ -117,6 +111,7 @@ class ElasticSearchStorage(BaseStorage):
     """
     #for testing
     self._mem_insert(namespace, stream, events, configuration)
+    
     for event in events:
       event = self.transform_event(event, insert=True)
       event['_index'] = namespace
@@ -135,7 +130,10 @@ class ElasticSearchStorage(BaseStorage):
   def _delete(self, namespace, stream, start_id, end_time, configuration):
     count = self._mem_delete(namespace, stream, start_id,
         end_time, configuration)
-    
+    """
+    Delete events with id > `start_id` and end_time <= `end_time`.
+    """
+ 
     start_time = uuid_to_kronos_time(start_id)
     body_query = {
           'query': {
@@ -165,14 +163,12 @@ class ElasticSearchStorage(BaseStorage):
                   ignore_indices=True)
     
     status = res.get('status')
+    #TODO!!
     if res is not None and res != 200:
       return 0
     return res
   
   def _mem_delete(self, namespace, stream, start_id, end_time, configuration):
-    """
-    Delete events with id > `start_id` and end_time <= `end_time`.
-    """
     start_id = str(start_id)
     start_id_event = Event({ID_FIELD: start_id})
     end_id_event = Event({ID_FIELD:
@@ -193,7 +189,11 @@ class ElasticSearchStorage(BaseStorage):
 
   def _retrieve(self, namespace, stream, start_id, 
       end_time, order, limit, configuration):
-      
+    """
+    Yield events from stream starting after the event with id `start_id` until
+    and including events with timestamp `end_time`.
+    """
+ 
     items =  self._mem_retrieve(namespace, stream, start_id, end_time, 
           order, limit, configuration) 
    
@@ -242,10 +242,6 @@ class ElasticSearchStorage(BaseStorage):
          
   def _mem_retrieve(self, namespace, stream, start_id, 
       end_time, order, limit, configuration):
-    """
-    Yield events from stream starting after the event with id `start_id` until
-    and including events with timestamp `end_time`.
-    """
     start_id = str(start_id)
     start_id_event = Event({ID_FIELD: start_id})
     end_id_event = Event({ID_FIELD:

@@ -83,6 +83,6 @@ class BaseStorage(object):
 
   def _clear(self):
     """
-      helper method used to clear the db duringtesting
+      helper method used to clear the db during testing
     """
     raise NotImplementedError('Must implement `_clear` method for %s' % self.__class__.__name__)
