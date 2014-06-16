@@ -8,6 +8,9 @@ from kronos.utils.math import uuid_to_kronos_time
 
 DOT = u'\uFF0E'
 
+import logging
+logger = logging.getLogger('elasticsearch').addHandler(logging.StreamHandler())
+
 class ElasticSearchStorage(BaseStorage):
   valid_str = lambda x: len(str(x)) > 0
   pos_int = lambda x: int(x) > 0

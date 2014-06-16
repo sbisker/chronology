@@ -7,8 +7,11 @@ import subprocess
 import sys
 import unittest
 
-#import gevent.monkey; gevent.monkey.patch_all()
-#import geventhttpclient.httplib; geventhttpclient.httplib.patch()
+import gevent.monkey; gevent.monkey.patch_all()
+import geventhttpclient.httplib; geventhttpclient.httplib.patch()
+
+geventhttpclient.httplib.HTTPResponse.length = geventhttpclient.httplib.HTTPResponse.content_length #fix for urllib3
+
 
 from argparse import ArgumentParser
 
