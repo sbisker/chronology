@@ -12,6 +12,8 @@ import unittest
 
 from argparse import ArgumentParser
 
+from kronos.core.exceptions import BackendMissing
+
 def load_config(config_name):
   # Configure Kronos with the right settings before running the tests.
   from kronos.conf import settings
@@ -23,7 +25,10 @@ def load_config(config_name):
 
 def teardown_config(config_name):
   from kronos.storage import router
-  router.get_backend(config_name)._clear()
+  try:
+    router.get_backend(config_name)._clear()
+  except BackendMissing:
+    pass
 
 def test_against(*configs):
   def decorator(function):
@@ -54,8 +59,7 @@ def test_against(*configs):
   return decorator
 
 
-#@test_against('memory', 'cassandra', 'elasticsearch')
-@test_against('elasticsearch')
+@test_against('memory', 'cassandra', 'elasticsearch')
 def test_common():
   test_suites = unittest.defaultTestLoader.discover(
     start_dir=os.path.join(os.path.dirname(__file__), 'tests/common'),
