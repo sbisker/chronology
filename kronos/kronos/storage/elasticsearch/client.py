@@ -159,17 +159,18 @@ class ElasticSearchStorage(BaseStorage):
             } 
           }
         }
-    
-    res = self.es.delete_by_query(index=namespace,
-                  doc_type=stream,
-                  body=body_query,
-                  ignore=404,
-                  ignore_indices=True)
-    status = res.get('status')
-    #TODO!!
-    if res is not None and res != 200:
-      return 0
-    return res
+    query = { 'index' : namespace,
+              'doc_type' : stream,
+              'body' : body_query,
+              'ignore' : 404,
+              'ignore_indices' : True
+              }
+    #TODO elastic search does not return stats on 
+    #deletions, https://github.com/elasticsearch/elasticsearch/issues/6519
+    count = self.es.search(**query).get('hits', {}).get('total', 0)
+    if count > 0:
+        self.es.delete_by_query(**query)
+    return count 
   
   def _mem_delete(self, namespace, stream, start_id, end_time, configuration):
     start_id = str(start_id)
