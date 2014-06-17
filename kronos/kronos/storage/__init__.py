@@ -36,7 +36,7 @@ class StorageRouter(object):
       self.backends[name] = backend_constructor(name,
                                                 namespaces=self.namespaces,
                                                 **backend_settings)
- 
+
   def get_backend(self, name):
     try:
       return self.backends[name]
