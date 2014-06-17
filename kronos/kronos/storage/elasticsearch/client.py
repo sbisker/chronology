@@ -1,3 +1,5 @@
+import os
+
 from elasticsearch import Elasticsearch
 from elasticsearch import helpers as es_helpers
 
@@ -5,28 +7,25 @@ from kronos.conf.constants import ID_FIELD, TIMESTAMP_FIELD
 from kronos.conf.constants import ResultOrder
 from kronos.storage.base import BaseStorage
 from kronos.utils.math import uuid_to_kronos_time
+from kronos.utils.validate import non_empty_str, pos_int, is_bool, is_list
 
-import logging
-logger = logging.getLogger('elasticsearch').addHandler(logging.StreamHandler())
 
 DOT = u'\uFF0E'
 MAX_LIMIT = (1 << 24) - 1
+INDEX_TEMPLATE = 'index.template'
 
 
 class ElasticSearchStorage(BaseStorage):
-    valid_str = lambda x: len(str(x)) > 0
-    pos_int = lambda x: int(x) > 0
     SETTINGS_VALIDATORS = {
-        'hosts': lambda x: len(x) > 0,
-        'keyspace_prefix': valid_str,
-        'cas_index': valid_str,
-        'event_index_template': valid_str,
-        'event_index_prefix': valid_str,
+        'hosts': lambda x: is_list,
+        'keyspace_prefix': non_empty_str,
+        'event_index_template': non_empty_str,
+        'event_index_prefix': non_empty_str,
         'rollover_size': pos_int,
         'rollover_check_period_seconds': pos_int,
         'read_size': pos_int,
         'default_max_items': pos_int,
-        'force_refresh': lambda x: isinstance(x, bool),
+        'force_refresh': is_bool,
     }
 
     def __init__(self, name, **settings):
@@ -39,16 +38,18 @@ class ElasticSearchStorage(BaseStorage):
         self.es = Elasticsearch(hosts=self.hosts)
 
         # Load index template.
-        template = open('%s/index.template' %
-                        '/'.join(__file__.split('/')[:-1])).read()
-        template = template.replace('{{ id_field }}', ID_FIELD)
-        template = template.replace('{{ timestamp_field }}', TIMESTAMP_FIELD)
-        template = template.replace('{{ event_index_prefix }}',
-                                    self.event_index_prefix)
+        template_path = os.path.join(os.path.dirname(__file__), INDEX_TEMPLATE)
+        with open(template_path) as f:
+            template = f.read()
+            template = template.replace('{{ id_field }}', ID_FIELD)
+            template = template.replace(
+                '{{ timestamp_field }}', TIMESTAMP_FIELD)
+            template = template.replace('{{ event_index_prefix }}',
+                                        self.event_index_prefix)
 
-        # Always update template (in case it's missing, or it was updated).
-        self.es.indices.put_template(
-            name=self.event_index_template, body=template)
+            # Always update template (in case it's missing, or it was updated).
+            self.es.indices.put_template(
+                name=self.event_index_template, body=template)
 
     def is_alive(self):
         return self.es.ping()
@@ -84,7 +85,6 @@ class ElasticSearchStorage(BaseStorage):
             event = self.transform_event(event, insert=True)
             event['_index'] = namespace
             event['_type'] = stream
-            event['_id'] = event[ID_FIELD]
 
         es_helpers.bulk(self.es, events, refresh=self.force_refresh)
 
@@ -127,7 +127,7 @@ class ElasticSearchStorage(BaseStorage):
         # TODO elastic search does not return stats on
         # deletions, https://github.com/elasticsearch/elasticsearch/issues/6519
         count = self.es.search(**query).get('hits', {}).get('total', 0)
-        if count > 0:
+        if count:
             self.es.delete_by_query(**query)
         return count
 
@@ -178,10 +178,10 @@ class ElasticSearchStorage(BaseStorage):
 
             for hit in hits:
                 event = hit['_source']
+                fetched_count += 1
                 if (event[TIMESTAMP_FIELD], event[ID_FIELD]) <= (start_time, start_id):
                     continue
                 yield self.transform_event(event)
-                fetched_count += 1
 
             limit -= limit_chunk
             if limit == 0:

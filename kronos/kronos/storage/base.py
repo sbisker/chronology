@@ -1,5 +1,5 @@
-import uuid
 import sys
+import uuid
 
 from kronos.conf.constants import ResultOrder
 from kronos.utils.math import uuid_from_kronos_time

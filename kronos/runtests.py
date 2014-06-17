@@ -10,12 +10,10 @@ import unittest
 import gevent.monkey; gevent.monkey.patch_all()
 import geventhttpclient.httplib; geventhttpclient.httplib.patch()
 
-geventhttpclient.httplib.HTTPResponse.length = geventhttpclient.httplib.HTTPResponse.content_length #fix for urllib3
-
-
 from argparse import ArgumentParser
 
 from kronos.core.exceptions import BackendMissing
+import kronos.core.monkey; kronos.core.monkey.patch()
 
 def load_config(config_name):
   # Configure Kronos with the right settings before running the tests.

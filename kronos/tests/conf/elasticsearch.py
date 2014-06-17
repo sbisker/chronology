@@ -8,7 +8,6 @@ storage = {
           },
       ],
       'keyspace_prefix' : 'kronos_test',
-      'cas_index' : 'TODO',
       'event_index_template': 'kronos',
       'event_index_prefix' : 'kronos',
       'rollover_size' : 10000, #?

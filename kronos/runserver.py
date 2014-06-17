@@ -12,6 +12,7 @@ from argparse import ArgumentParser
 
 from kronos.conf import settings
 from kronos.conf.constants import ServingMode
+import kronos.core.monkey; kronos.core.monkey.patch()
 
 if __name__ == '__main__':
   parser = ArgumentParser(description='Kronos HTTP server.')

@@ -11,6 +11,7 @@ from kronos.storage.cassandra.internals import Stream
 from kronos.utils.math import time_to_kronos_time
 from kronos.utils.math import uuid_from_kronos_time
 from kronos.utils.math import UUIDType
+from kronos.utils.validate import non_empty_str, pos_int, is_list
 
 log = logging.getLogger(__name__) 
 
@@ -27,9 +28,9 @@ class CassandraStorage(BaseStorage):
     'default_timewidth_seconds': 
        lambda x: (int(x) > 0 and 
                   time_to_kronos_time(int(x)) <= Stream.MAX_WIDTH),
-    'default_shards_per_bucket': lambda x: int(x) > 0,
-    'hosts': lambda x: isinstance(x, list),
-    'keyspace_prefix': lambda x: len(str(x)) > 0,
+    'default_shards_per_bucket': pos_int,
+    'hosts': is_list,
+    'keyspace_prefix': non_empty_str,
     'replication_factor': lambda x: int(x) >= 1,
     'read_size': lambda x: int(x)
   }
