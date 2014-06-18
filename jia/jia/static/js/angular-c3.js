@@ -1,5 +1,5 @@
 angular.module('angular-c3', [])
-  .directive('c3', function($compile) {
+  .directive('c3chart', function($compile) {
     return {
       restrict: 'EA',
       scope: {
