@@ -11,7 +11,6 @@ from tests.server import KronosServerTestCase
 
 
 class TestKronosAPIs(KronosServerTestCase):
-
   def test_put(self):
     # Test put with increasing timestamps.
     stream = 'TestKronosAPIs_test_put_ascending'

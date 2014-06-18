@@ -1,8 +1,7 @@
 #!/usr/bin/python
+import kronos.core.monkey; kronos.core.monkey.patch_all()
 
-import gevent.monkey; gevent.monkey.patch_all()
 import gevent.pywsgi
-import geventhttpclient.httplib; geventhttpclient.httplib.patch()
 
 import imp
 import logging; logging.basicConfig()
@@ -12,7 +11,6 @@ from argparse import ArgumentParser
 
 from kronos.conf import settings
 from kronos.conf.constants import ServingMode
-import kronos.core.monkey; kronos.core.monkey.patch()
 
 if __name__ == '__main__':
   parser = ArgumentParser(description='Kronos HTTP server.')

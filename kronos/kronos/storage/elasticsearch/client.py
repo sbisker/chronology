@@ -7,7 +7,7 @@ from kronos.conf.constants import ID_FIELD, TIMESTAMP_FIELD
 from kronos.conf.constants import ResultOrder
 from kronos.storage.base import BaseStorage
 from kronos.utils.math import uuid_to_kronos_time
-from kronos.utils.validate import non_empty_str, pos_int, is_bool, is_list
+from kronos.utils.validate import is_non_empty_str, is_pos_int, is_bool, is_list
 
 
 DOT = u'\uFF0E'
@@ -18,13 +18,13 @@ INDEX_TEMPLATE = 'index.template'
 class ElasticSearchStorage(BaseStorage):
     SETTINGS_VALIDATORS = {
         'hosts': lambda x: is_list,
-        'keyspace_prefix': non_empty_str,
-        'event_index_template': non_empty_str,
-        'event_index_prefix': non_empty_str,
-        'rollover_size': pos_int,
-        'rollover_check_period_seconds': pos_int,
-        'read_size': pos_int,
-        'default_max_items': pos_int,
+        'keyspace_prefix': is_non_empty_str,
+        'event_index_template': is_non_empty_str,
+        'event_index_prefix': is_non_empty_str,
+        'rollover_size': is_pos_int,
+        'rollover_check_period_seconds': is_pos_int,
+        'read_size': is_pos_int,
+        'default_max_items': is_pos_int,
         'force_refresh': is_bool,
     }
 

@@ -3,10 +3,10 @@
 """
 import types
 
-def non_empty_str(x):
+def is_non_empty_str(x):
   return isinstance(x, types.StringTypes) and len(x) > 0
 
-def pos_int(x):
+def is_pos_int(x):
   return int(x) > 0
 
 def is_bool(x):

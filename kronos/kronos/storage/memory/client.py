@@ -8,7 +8,7 @@ from kronos.conf.constants import ResultOrder
 from kronos.storage.base import BaseStorage
 from kronos.utils.math import uuid_from_kronos_time
 from kronos.utils.math import UUIDType
-from kronos.utils.validate import pos_int
+from kronos.utils.validate import is_pos_int
 
 class Event(dict):
   """
@@ -42,7 +42,7 @@ class InMemoryStorage(BaseStorage):
   """
 
   SETTINGS_VALIDATORS = {
-    'default_max_items': pos_int,
+    'default_max_items': is_pos_int,
   }
   
   def __init__(self, name, **settings):

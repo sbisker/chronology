@@ -1,5 +1,7 @@
 #!/usr/bin/python
 
+import kronos.core.monkey; kronos.core.monkey.patch_all()
+
 import functools
 import importlib
 import os
@@ -7,13 +9,10 @@ import subprocess
 import sys
 import unittest
 
-import gevent.monkey; gevent.monkey.patch_all()
-import geventhttpclient.httplib; geventhttpclient.httplib.patch()
 
 from argparse import ArgumentParser
 
 from kronos.core.exceptions import BackendMissing
-import kronos.core.monkey; kronos.core.monkey.patch()
 
 def load_config(config_name):
   # Configure Kronos with the right settings before running the tests.
