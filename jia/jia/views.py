@@ -1,6 +1,7 @@
 import binascii
 import os
 import sys
+import datetime
 
 from flask import redirect
 from flask import request
@@ -10,8 +11,13 @@ from jia.auth import require_auth
 from jia.decorators import json_endpoint
 from jia.errors import PyCodeError
 from jia.models import Board
+from jia.precompute import DT_FORMAT
+from jia.utils import get_seconds
 from pykronos import KronosClient
+from pykronos.utils.cache import QueryCache
+from pykronos.utils.time import datetime_to_epoch_time, kronos_time_to_datetime, epoch_time_to_kronos_time
 
+from precompute import run_query, schedule, cancel
 
 @app.route('/status', methods=['GET'])
 def status():
@@ -82,6 +88,51 @@ def board(id=None):
       board_data['id'] = new_id
     else:
       board = Board.query.filter_by(id=id).first_or_404()
+
+    old_panels = board.json()['panels']
+    new_panels = board_data['panels']
+
+    # Make panel dicts so they are searchable by ID
+    old_panels = {p['id']: p for p in old_panels}
+    new_panels = {p['id']: p for p in new_panels}
+
+    # Find any changes to precompute settings
+    for panel in old_panels.values():
+      new_panel = new_panels.get(panel['id'])
+
+      # Check for deletions
+      if (panel['data_source']['precompute']['enabled'] and not new_panel):
+        cancel(panel)
+
+      # Check for precompute disabled
+      elif (panel['data_source']['precompute']['enabled']
+            and new_panel
+            and not new_panel['data_source']['precompute']['enabled']):
+        cancel(panel)
+
+    for panel in new_panels.values():
+      if panel['data_source']['precompute']['enabled']:
+        old_panel = old_panels.get(panel['id'])
+
+        # Check for precompute enabled
+        if (not old_panel 
+            or not old_panel['data_source']['precompute']['enabled']):
+          task_id = schedule(panel)
+          panel['data_source']['precompute']['task_id'] = task_id
+
+        # Check for code change or precompute settings change
+        elif (old_panel['data_source']['code'] != panel['data_source']['code']
+              or old_panel['data_source']['precompute']
+              != panel['data_source']['precompute']
+              or old_panel['data_source']['timeframe']
+              != panel['data_source']['timeframe']):
+          cancel(old_panel)
+          task_id = schedule(panel)
+          panel['data_source']['precompute']['task_id'] = task_id
+
+      # Transform panel dict back into list for saving
+      new_panels = new_panels.values()
+
     board.set_board_data(board_data)
     board.save()
   else:
@@ -108,22 +159,57 @@ def delete_board(id=None):
 def callsource(id=None):
   request_body = request.get_json()
   code = request_body.get('code')
+  precompute = request_body.get('precompute')
+  timeframe = request_body.get('timeframe')
+
+  if timeframe['mode'] == 'recent':
+    end_time = datetime.datetime.now()
+    duration = datetime.timedelta(seconds=get_seconds(timeframe))
+    start_time = end_time - duration
+  elif timeframe['mode'] == 'range':
+    start_time = datetime.datetime.strptime(timeframe['from'], DT_FORMAT)
+    end_time = datetime.datetime.strptime(timeframe['to'], DT_FORMAT)
+  else:
+    raise ValueError("Timeframe mode must be 'recent' or 'range'")
 
   locals_dict = {
     'kronos_client': KronosClient(app.config['KRONOS_URL'],
                                   namespace=app.config['KRONOS_NAMESPACE']),
-    'events': []
+    'events': [],
+    'start_time': start_time,
+    'end_time': end_time,
     }
 
   # TODO(marcua): We'll evenutally get rid of this security issue
   # (i.e., `exec` is bad!) once we build a query building interface.
   # In the meanwhile, we trust in user authentication.
   if code:
-    try:
-      exec code in {}, locals_dict # No globals.
-    except:
-      _, exception, tb = sys.exc_info()
-      raise PyCodeError(exception, tb)
+    if precompute['enabled']:
+      # Get from cache
+      cache_client = KronosClient(app.config['CACHE_KRONOS_URL'],
+                                namespace=app.config['CACHE_KRONOS_NAMESPACE'],
+                                blocking=False,
+                                sleep_block=0.2)
+      width = int(get_seconds(precompute['bucket_width']))
+      bucket_width = datetime.timedelta(seconds=width)
+      timeframe = int(get_seconds(timeframe))
+
+      cache = QueryCache(cache_client, run_query,
+                         bucket_width, 'locu_computed',
+                         query_function_args=[code])
+
+      now = datetime_to_epoch_time(datetime.datetime.now())
+      end = now - (now % width)
+      start = end - (timeframe - (timeframe % width))
+      start_time = kronos_time_to_datetime(epoch_time_to_kronos_time(start))
+      end_time = kronos_time_to_datetime(epoch_time_to_kronos_time(end))
+      locals_dict['events'] = list(cache.cached_results(start_time, end_time))
+    else:
+      try:
+        exec code in {}, locals_dict # No globals.
+      except:
+        _, exception, tb = sys.exc_info()
+        raise PyCodeError(exception, tb)
 
   events = sorted(locals_dict.get('events', []),
                   key=lambda event: event['@time'])

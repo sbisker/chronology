@@ -1,8 +1,9 @@
 import hashlib
+import marshal
+import binascii
 
 from datetime import datetime
 from datetime import timedelta
-from inspect import getsource
 from pykronos.client import TIMESTAMP_FIELD
 from pykronos.utils.time import datetime_to_epoch_time
 from pykronos.utils.time import epoch_time_to_kronos_time
@@ -53,7 +54,8 @@ class QueryCache(object):
   QUERY_CACHE_VERSION = 1
   CACHE_KEY = 'cached'
 
-  def __init__(self, client, query_function, bucket_width, scratch_namespace):
+  def __init__(self, client, query_function, bucket_width, scratch_namespace,
+               query_function_args=[], query_function_kwargs={}):
     """
     Initializes the query cache.
     
@@ -69,10 +71,16 @@ class QueryCache(object):
     of data.
     :param scratch_namespace: The namespace under which to store
     cached events.
+    :param query_function_args: An optional list of args to send to
+    query_function.
+    :param query_function_kwargs: An optional dict of kwargs to send to
+    query_function.
     """
-
+    
     self._client = client
     self._query_function = query_function
+    self._query_function_args = query_function_args
+    self._query_function_kwargs = query_function_kwargs
     self._bucket_width = int(bucket_width.total_seconds())
     if self._bucket_width != bucket_width.total_seconds():
       raise ValueError('bucket_width can not have subsecond granularity')
@@ -97,7 +105,9 @@ class QueryCache(object):
     query_details = [
       str(QueryCache.QUERY_CACHE_VERSION),
       str(self._bucket_width),
-      getsource(self._query_function),
+      binascii.b2a_hex(marshal.dumps(self._query_function.func_code)),
+      str(self._query_function_args),
+      str(self._query_function_kwargs),
       ]
     return hashlib.sha512('$'.join(query_details)).hexdigest()[:20]
 
@@ -170,7 +180,9 @@ class QueryCache(object):
       epoch_time_to_kronos_time(bucket))
     bucket_end = kronos_time_to_datetime(
       epoch_time_to_kronos_time(bucket + self._bucket_width))
-    bucket_events = list(self._query_function(bucket_start, bucket_end))
+    bucket_events = list(self._query_function(bucket_start, bucket_end,
+                                              *self._query_function_args,
+                                              **self._query_function_kwargs))
     # If all events in the bucket happened before the untrusted
     # time, cache the query results.
     if bucket_end < untrusted_time:

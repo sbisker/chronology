@@ -3,6 +3,7 @@ from __future__ import absolute_import
 import datetime
 import gevent
 import gipc
+import traceback
 
 from heapq import heappush, heappop, heapify
 from common.concurrent import GIPCExecutor
@@ -60,6 +61,8 @@ class Scheduler(object):
       'code': ...,  # string of Python code
       'interval': 600,  # in seconds
     }
+
+    An interval of 0 indicates the task should only be run once.
     """
     self._schedule_pipe.put(('schedule', task))
 
@@ -115,8 +118,10 @@ class Scheduler(object):
         for result in ready:
           results.remove(result)
           task = result.value
-          run_at = now + datetime.timedelta(seconds=int(task['interval']))
-          self._schedule(task, next_run=run_at)
+          interval = int(task['interval'])
+          if interval:
+            run_at = now + datetime.timedelta(seconds=int(task['interval']))
+            self._schedule(task, next_run=run_at)
 
 def _execute(task):
   """A wrapper around exec
@@ -132,5 +137,6 @@ def _execute(task):
     print "[%s] -- %s -- COMPLETE" % (datetime.datetime.now(), task['id'])
   except Exception as e:
     print "[%s] -- %s -- FAIL" % (datetime.datetime.now(), task['id'])
-
-  return task
+    print traceback.format_exc()
+  finally:
+    return task
