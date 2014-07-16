@@ -134,7 +134,7 @@
             </label>
           </div>
           <div class="options animate-show" ng-show="panel.data_source.precompute.enabled">
-            Bucket width <button class="btn btn-primary btn-sm btn-help" popover="{[ bucketWidthHelpText ]}"><span class="glyphicon glyphicon-question-sign"></span></button>
+            Bucket width <button class="btn btn-primary btn-sm btn-help" popover="{[ bucketWidthHelpText ]}"><span class="fa fa-question"></span></button>
             <input type="number" class="form-control" ng-model="panel.data_source.precompute.bucket_width.value">
             <select selecter="panel.data_source.precompute.bucket_width.scale">
               <option ng-repeat="scale in timeScales" value="{[ scale ]}">{[ scale ]}</option>

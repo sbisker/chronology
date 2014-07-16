@@ -209,6 +209,7 @@ def callsource(id=None):
       end_time = kronos_time_to_datetime(epoch_time_to_kronos_time(end))
       locals_dict['events'] = list(cache.retrieve_interval(start_time,
                                                            end_time,
+                                                           datetime.datetime.now(),
                                                            cache=False))
     else:
       try:
