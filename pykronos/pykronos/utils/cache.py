@@ -42,14 +42,9 @@ class QueryCache(object):
     the same result, and thus these results can be cached.  For data
     after that datetime, computations are considered untrustable
     still, and any computed results will be returned but not cached.
-  - A QueryCache exposes two interfaces: `cached_results` and
-    `compute_and_cache`.  `compute_and_cache` is most useful in
-    scenarios where a caller wants to benefit from previously computed
-    results while caching any that haven't been computed yet.
-    `cached_results` is useful in scenarios where a caller wants to
-    precompute and cache results asynchronously using
-    `compute_and_cache`, and then quickly retrieve any previously
-    computed results without performing any new computation.
+  - A QueryCache exposes `retrieve_interval` for access to events.
+    Flags for computing uncached buckets, forcing recompute on all buckets,
+    and caching newly computed values are provided.
   """
   QUERY_CACHE_VERSION = 1
   CACHE_KEY = 'cached'
@@ -175,7 +170,7 @@ class QueryCache(object):
         yield (kronos_time_to_epoch_time(first_result[TIMESTAMP_FIELD]),
                first_result[QueryCache.CACHE_KEY])
 
-  def _compute_and_cache_bucket(self, bucket, untrusted_time):
+  def _compute_bucket(self, bucket, untrusted_time, cache=True):
     bucket_start = kronos_time_to_datetime(
       epoch_time_to_kronos_time(bucket))
     bucket_end = kronos_time_to_datetime(
@@ -183,41 +178,22 @@ class QueryCache(object):
     bucket_events = list(self._query_function(bucket_start, bucket_end,
                                               *self._query_function_args,
                                               **self._query_function_kwargs))
-    # If all events in the bucket happened before the untrusted
-    # time, cache the query results.
-    if bucket_end < untrusted_time:
-      caching_event = {TIMESTAMP_FIELD: bucket_start,
-                       QueryCache.CACHE_KEY: bucket_events}
-      self._client.delete(self._scratch_stream, bucket_start,
-                          bucket_start + timedelta(milliseconds=1),
-                          namespace=self._scratch_namespace)
-      self._client.put({self._scratch_stream: [caching_event]},
-                       namespace=self._scratch_namespace)
+
+    if cache:
+      # If all events in the bucket happened before the untrusted
+      # time, cache the query results.
+      if bucket_end < untrusted_time:
+        caching_event = {TIMESTAMP_FIELD: bucket_start,
+                         QueryCache.CACHE_KEY: bucket_events}
+        self._client.delete(self._scratch_stream, bucket_start,
+                            bucket_start + timedelta(milliseconds=1),
+                            namespace=self._scratch_namespace)
+        self._client.put({self._scratch_stream: [caching_event]},
+                         namespace=self._scratch_namespace)
     return bucket_events
 
-  def cached_results(self, start_time, end_time):
-    """
-    Retrieve all previously computed results.
-
-    Retrieves all results from the cache between `start_time` and
-    `end_time` (datetimes), which must align to `bucket_width`
-    boundaries.  Performs no computation.  Useful for
-    asynchronously/periodically calling `compute_and_cache` to
-    precompute results and quickly retrieving all cached results in
-    interactive time.
-
-    :param start_time: A datetime for the beginning of the range,
-    aligned with `bucket_width`.
-    :param end_time: A datetime for the end of the range, aligned with
-    `bucket_width`.
-    """
-    self._sanity_check_time(start_time, end_time)
-    for bucket, bucket_events in self._cached_results(start_time, end_time):
-      for event in bucket_events:
-        yield event
-
-  def compute_and_cache(self, start_time, end_time, untrusted_time,
-                        force_compute=False):
+  def retrieve_interval(self, start_time, end_time, untrusted_time,
+                        compute=True, force_compute=False, cache=True):
     """
     Return the results for `query_function` on every `bucket_width`
     time period between `start_time` and `end_time`.  Look for
@@ -232,8 +208,13 @@ class QueryCache(object):
     :param untrusted_time: A datetime after which to not trust that
     computed data is stable.  Any buckets that overlap with or follow
     this untrusted_time will not be cached.
+    :param compute: A boolean that, if True, will compute any values that are
+    not in the cache.
+    :param compute: A boolean that, if True, will compute any non-cached
+    results.
     :param force_compute: A boolean that, if True, will force
     recompute and recaching of even previously cached data.
+    :param cache: A boolean that, if True, will cache any computed results.
     """
     self._sanity_check_time(start_time, end_time)
     if not untrusted_time.tzinfo:
@@ -266,9 +247,10 @@ class QueryCache(object):
         emit_events = current_cached_bucket[1]
         current_cached_bucket = None
       else:
-        # We don't have cached events, so compute the query.
-        emit_events = self._compute_and_cache_bucket(required_bucket,
-                                                     untrusted_time)
+        if compute:
+          # We don't have cached events, so compute the query.
+          emit_events = self._compute_bucket(required_bucket, untrusted_time,
+                                             cache=cache)
       for event in emit_events:
         yield event
     self._client.flush()

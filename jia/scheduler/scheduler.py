@@ -96,7 +96,7 @@ class Scheduler(object):
         task = heappop(self._task_queue)[1]
 
         if task['id'] not in self._pending_cancels:
-          result = self._executor.submit(_execute, [task])
+          result = self._executor.submit(_execute, task)
           results.add(result)
         else:
           self._pending_cancels.remove(task['id'])
@@ -117,11 +117,14 @@ class Scheduler(object):
         ready = self._executor.wait(results, num=1, timeout=0.5)
         for result in ready:
           results.remove(result)
-          task = result.value
-          interval = int(task['interval'])
-          if interval:
-            run_at = now + datetime.timedelta(seconds=int(task['interval']))
-            self._schedule(task, next_run=run_at)
+          if result.value:
+            task = result.value
+            interval = int(task['interval'])
+            if interval:
+              run_at = now + datetime.timedelta(seconds=int(task['interval']))
+              self._schedule(task, next_run=run_at)
+          else:
+            print "ERROR:", result.exception
 
 def _execute(task):
   """A wrapper around exec

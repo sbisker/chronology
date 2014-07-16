@@ -1,4 +1,4 @@
-def get_seconds(time):
+def get_seconds(value, scale):
   """Convert time scale dict to seconds
 
   Given a dictionary with keys for scale and value, convert
@@ -14,5 +14,5 @@ def get_seconds(time):
     'years': lambda x: x * 60 * 60 * 24 * 365,
   }
 
-  return scales[time['scale']](time['value'])
+  return scales[scale](value)
 

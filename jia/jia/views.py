@@ -15,7 +15,9 @@ from jia.precompute import DT_FORMAT
 from jia.utils import get_seconds
 from pykronos import KronosClient
 from pykronos.utils.cache import QueryCache
-from pykronos.utils.time import datetime_to_epoch_time, kronos_time_to_datetime, epoch_time_to_kronos_time
+from pykronos.utils.time import datetime_to_epoch_time
+from pykronos.utils.time import kronos_time_to_datetime
+from pykronos.utils.time import epoch_time_to_kronos_time
 
 from precompute import run_query, schedule, cancel
 
@@ -164,7 +166,8 @@ def callsource(id=None):
 
   if timeframe['mode'] == 'recent':
     end_time = datetime.datetime.now()
-    duration = datetime.timedelta(seconds=get_seconds(timeframe))
+    duration = datetime.timedelta(seconds=get_seconds(timeframe['value'],
+                                                      timeframe['scale']))
     start_time = end_time - duration
   elif timeframe['mode'] == 'range':
     start_time = datetime.datetime.strptime(timeframe['from'], DT_FORMAT)
@@ -190,12 +193,13 @@ def callsource(id=None):
                                 namespace=app.config['CACHE_KRONOS_NAMESPACE'],
                                 blocking=False,
                                 sleep_block=0.2)
-      width = int(get_seconds(precompute['bucket_width']))
+      width = int(get_seconds(precompute['bucket_width']['value'],
+                              precompute['bucket_width']['scale']))
       bucket_width = datetime.timedelta(seconds=width)
-      timeframe = int(get_seconds(timeframe))
+      timeframe = int(get_seconds(timeframe['value'], timeframe['scale']))
 
       cache = QueryCache(cache_client, run_query,
-                         bucket_width, 'locu_computed',
+                         bucket_width, app.config['CACHE_KRONOS_NAMESPACE'],
                          query_function_args=[code])
 
       now = datetime_to_epoch_time(datetime.datetime.now())
@@ -203,7 +207,9 @@ def callsource(id=None):
       start = end - (timeframe - (timeframe % width))
       start_time = kronos_time_to_datetime(epoch_time_to_kronos_time(start))
       end_time = kronos_time_to_datetime(epoch_time_to_kronos_time(end))
-      locals_dict['events'] = list(cache.cached_results(start_time, end_time))
+      locals_dict['events'] = list(cache.retrieve_interval(start_time,
+                                                           end_time,
+                                                           cache=False))
     else:
       try:
         exec code in {}, locals_dict # No globals.

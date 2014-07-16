@@ -191,11 +191,9 @@ function ($scope, $http, $location, $timeout, $injector, $routeParams,
 
   $scope.cleanBoard = function () {
     // Deep copy the board data and remove the cached data.
-    
     if (!$scope.boardData) {
       return undefined;
     }
-
     return JSON.parse(JSON.stringify($scope.boardData, function(key, value) {
       if (key === 'cache') {
         return undefined;
@@ -280,6 +278,8 @@ function ($scope, $http, $location, $timeout, $injector, $routeParams,
         panel.data_source.precompute.enabled = false;
       }
     });
+
+    // Automatically format from/to datetime fields
     $scope.$watch(function () {
       return panel.data_source.timeframe.from;
     }, function (newVal, oldVal) {
@@ -302,9 +302,9 @@ function ($scope, $http, $location, $timeout, $injector, $routeParams,
         code: '',
         timeframe: {
           mode: 'recent',
-          value: 30,
+          value: 2,
           scale: 'days',
-          from: moment().subtract('days', 10).format($scope.dateTimeFormat),
+          from: moment().subtract('days', 2).format($scope.dateTimeFormat),
           to: moment().format($scope.dateTimeFormat)
         },
         precompute: {
@@ -458,6 +458,18 @@ app.directive('visualization', function ($http, $compile) {
 });
 
 app.directive('selecter', function ($http, $compile) {
+  /*
+   * Simple Angular directive for Ben Plum's Selecter.js
+   *
+   * <!-- Bind the selected value to someVarInScope (similar to ng-model) -->
+   * <select selecter="someVarInScope">
+   *   <!-- Can easily use ng-repeat here if desired -->
+   *   <option value="opt1">Option 1</option>
+   *   <option value="opt2">Option 2</option>
+   * </select>
+   *
+   */
+
   var linker = function(scope, element, attrs) {
     var createSelecter = function () {
       $(element).selecter({
