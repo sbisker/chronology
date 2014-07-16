@@ -134,12 +134,12 @@
             </label>
           </div>
           <div class="options animate-show" ng-show="panel.data_source.precompute.enabled">
-            <span ng-if="panel.data_source.timeframe.mode == 'recent'">every
-              <input type="number" class="form-control" ng-model="panel.data_source.precompute.bucket_width.value">
-              <select selecter="panel.data_source.precompute.bucket_width.scale">
-                <option ng-repeat="scale in timeScales" value="{[ scale ]}">{[ scale ]}</option>
-              </select>
-              Trust data older than
+            Bucket width <button class="btn btn-primary btn-sm btn-help" popover="{[ bucketWidthHelpText ]}"><span class="glyphicon glyphicon-question-sign"></span></button>
+            <input type="number" class="form-control" ng-model="panel.data_source.precompute.bucket_width.value">
+            <select selecter="panel.data_source.precompute.bucket_width.scale">
+              <option ng-repeat="scale in timeScales" value="{[ scale ]}">{[ scale ]}</option>
+            </select>
+            <span ng-if="panel.data_source.timeframe.mode == 'recent'">Trust data older than
               <input type="number" class="form-control" ng-model="panel.data_source.precompute.untrusted_time.value">
               <select selecter="panel.data_source.precompute.untrusted_time.scale">
                 <option ng-repeat="scale in timeScales" value="{[ scale ]}">{[ scale ]}</option>

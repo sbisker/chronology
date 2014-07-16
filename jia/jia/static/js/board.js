@@ -44,6 +44,10 @@ function ($scope, $http, $location, $timeout, $injector, $routeParams,
     'months',
     'years'
   ];
+
+  $scope.bucketWidthHelpText = "Choose a bucket width that is equal to or a\
+                                multiple of the size of the timeframe you are\
+                                aggregating on.";
  
   this.loadVisualizations = function () {
     var visualizations = {};

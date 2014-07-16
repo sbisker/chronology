@@ -48,6 +48,14 @@ a {
   height: 40px;
 }
 
+.btn-help {
+  width: 20px;
+  height: 20px;
+  padding: 1px 0 0 0;
+  margin-right: 3px;
+  border-radius: 50%;
+}
+
 .required {
   border-bottom: 1px solid #f00 !important;
   background: #fee;
