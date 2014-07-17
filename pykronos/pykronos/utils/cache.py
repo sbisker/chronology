@@ -209,8 +209,6 @@ class QueryCache(object):
     :param untrusted_time: A datetime after which to not trust that
     computed data is stable.  Any buckets that overlap with or follow
     this untrusted_time will not be cached.
-    :param compute: A boolean that, if True, will compute any values that are
-    not in the cache.
     :param compute: A boolean that, if True, will compute any non-cached
     results.
     :param force_compute: A boolean that, if True, will force

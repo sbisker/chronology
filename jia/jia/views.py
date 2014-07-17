@@ -95,7 +95,14 @@ def board(id=None):
     new_panels = board_data['panels']
 
     # Make panel dicts so they are searchable by ID
-    old_panels = {p['id']: p for p in old_panels}
+    try:
+      old_panels = {p['id']: p for p in old_panels}
+    except KeyError:
+      # If the old panels do not have an id, then they are pre-precompute era.
+      # Therefore none of them have precompute turned on, so for the purpose of
+      # determining whether precompute has been enabled or changed, we can
+      # pretend they don't exist.
+      old_panels = {}
     new_panels = {p['id']: p for p in new_panels}
 
     # Find any changes to precompute settings

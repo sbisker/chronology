@@ -253,12 +253,12 @@ function ($scope, $http, $location, $timeout, $injector, $routeParams,
     // unset fields
     var defaultPanel = $scope.newPanelObj();
     var setDefaults = function (obj, defaults) {
-      _.each(defaults, function (element, index) {
-        if (typeof obj[index] == 'undefined') {
-          obj[index] = element;
+      _.each(defaults, function (element, key) {
+        if (typeof obj[key] == 'undefined') {
+          obj[key] = element;
         }
-        if (typeof obj[index] == 'object') {
-          setDefaults(obj[index], element);
+        if (typeof obj[key] == 'object') {
+          setDefaults(obj[key], element);
         }
       });
     };
