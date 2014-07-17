@@ -194,6 +194,7 @@ class QueryCache(object):
 
   def retrieve_interval(self, start_time, end_time, untrusted_time,
                         compute=True, force_compute=False, cache=True):
+    print "cache", cache
     """
     Return the results for `query_function` on every `bucket_width`
     time period between `start_time` and `end_time`.  Look for

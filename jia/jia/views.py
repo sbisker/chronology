@@ -11,7 +11,7 @@ from jia.auth import require_auth
 from jia.decorators import json_endpoint
 from jia.errors import PyCodeError
 from jia.models import Board
-from jia.precompute import DT_FORMAT
+from jia.precompute import DT_FORMAT, precompute_cache
 from jia.utils import get_seconds
 from pykronos import KronosClient
 from pykronos.utils.cache import QueryCache
@@ -163,63 +163,17 @@ def callsource(id=None):
   code = request_body.get('code')
   precompute = request_body.get('precompute')
   timeframe = request_body.get('timeframe')
+  bucket_width = get_seconds(precompute['bucket_width']['value'],
+                             precompute['bucket_width']['scale'])
+  bucket_width = epoch_time_to_kronos_time(bucket_width)
+  untrusted_time = get_seconds(precompute['untrusted_time']['value'],
+                               precompute['untrusted_time']['scale'])
+  now = datetime.datetime.now()
+  untrusted_datetime = now - datetime.timedelta(seconds=untrusted_time)
 
-  if timeframe['mode'] == 'recent':
-    end_time = datetime.datetime.now()
-    duration = datetime.timedelta(seconds=get_seconds(timeframe['value'],
-                                                      timeframe['scale']))
-    start_time = end_time - duration
-  elif timeframe['mode'] == 'range':
-    start_time = datetime.datetime.strptime(timeframe['from'], DT_FORMAT)
-    end_time = datetime.datetime.strptime(timeframe['to'], DT_FORMAT)
-  else:
-    raise ValueError("Timeframe mode must be 'recent' or 'range'")
-
-  locals_dict = {
-    'kronos_client': KronosClient(app.config['KRONOS_URL'],
-                                  namespace=app.config['KRONOS_NAMESPACE']),
-    'events': [],
-    'start_time': start_time,
-    'end_time': end_time,
-    }
-
-  # TODO(marcua): We'll evenutally get rid of this security issue
-  # (i.e., `exec` is bad!) once we build a query building interface.
-  # In the meanwhile, we trust in user authentication.
-  if code:
-    if precompute['enabled']:
-      # Get from cache
-      cache_client = KronosClient(app.config['CACHE_KRONOS_URL'],
-                                namespace=app.config['CACHE_KRONOS_NAMESPACE'],
-                                blocking=False,
-                                sleep_block=0.2)
-      width = int(get_seconds(precompute['bucket_width']['value'],
-                              precompute['bucket_width']['scale']))
-      bucket_width = datetime.timedelta(seconds=width)
-      timeframe = int(get_seconds(timeframe['value'], timeframe['scale']))
-
-      cache = QueryCache(cache_client, run_query,
-                         bucket_width, app.config['CACHE_KRONOS_NAMESPACE'],
-                         query_function_args=[code])
-
-      now = datetime_to_epoch_time(datetime.datetime.now())
-      end = now - (now % width)
-      start = end - (timeframe - (timeframe % width))
-      start_time = kronos_time_to_datetime(epoch_time_to_kronos_time(start))
-      end_time = kronos_time_to_datetime(epoch_time_to_kronos_time(end))
-      locals_dict['events'] = list(cache.retrieve_interval(start_time,
-                                                           end_time,
-                                                           datetime.datetime.now(),
-                                                           cache=False))
-    else:
-      try:
-        exec code in {}, locals_dict # No globals.
-      except:
-        _, exception, tb = sys.exc_info()
-        raise PyCodeError(exception, tb)
-
-  events = sorted(locals_dict.get('events', []),
-                  key=lambda event: event['@time'])
+  events = precompute_cache(code, timeframe, bucket_width, untrusted_datetime,
+                            cache=False)
+  
   response = {}
   response['events'] = events
   return response
