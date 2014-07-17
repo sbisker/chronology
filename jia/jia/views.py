@@ -178,7 +178,8 @@ def callsource(id=None):
   now = datetime.datetime.now()
   untrusted_datetime = now - datetime.timedelta(seconds=untrusted_time)
 
-  events = precompute_cache(code, timeframe, bucket_width, untrusted_datetime,
+  events = precompute_cache(code, timeframe, bucket_width,
+                            untrusted_time=untrusted_datetime,
                             cache=False)
   
   response = {}

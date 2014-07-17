@@ -94,7 +94,7 @@ class QueryCacheTest(unittest.TestCase):
     def bad_start_boundary():
       return list(
         cache.retrieve_interval(start_time + timedelta(minutes=1),
-                                end_time, untrusted_time))
+                                end_time, untrusted_time=untrusted_time))
     self.assertRaises(ValueError, bad_start_boundary)
 
   @compute_cache_test
@@ -109,7 +109,8 @@ class QueryCacheTest(unittest.TestCase):
 
     # Verify all results were computed correctly.
     self.verify_results(lambda: list(
-        cache.retrieve_interval(start_time, end_time, untrusted_time)),
+        cache.retrieve_interval(start_time, end_time,
+                                untrusted_time=untrusted_time)),
                         cache, 25, 31)
 
     # Verify only trusted results are cached.
@@ -120,7 +121,8 @@ class QueryCacheTest(unittest.TestCase):
     # Running the same operations twice should result in the same
     # results as before.
     self.verify_results(lambda: list(
-        cache.retrieve_interval(start_time, end_time, untrusted_time)),
+        cache.retrieve_interval(start_time, end_time,
+                                untrusted_time=untrusted_time)),
                         cache, 25, 17)
     self.verify_results(lambda: list(
         cache.retrieve_interval(start_time, end_time, compute=False)),
@@ -131,7 +133,7 @@ class QueryCacheTest(unittest.TestCase):
     self.verify_results(lambda: list(
         cache.retrieve_interval(start_time - self.bucket_width,
                                 end_time + self.bucket_width,
-                                untrusted_time)),
+                                untrusted_time=untrusted_time)),
                         cache, 25, 19)
     self.verify_results(lambda: list(
         cache.retrieve_interval(start_time, end_time, compute=False)),
@@ -140,7 +142,8 @@ class QueryCacheTest(unittest.TestCase):
     # Increasing the trusted time should increase the cached results.
     untrusted_time = untrusted_time + timedelta(minutes=40)
     self.verify_results(lambda: list(
-        cache.retrieve_interval(start_time, end_time, untrusted_time)),
+        cache.retrieve_interval(start_time, end_time,
+                                untrusted_time=untrusted_time)),
                         cache, 25, 17)
     self.verify_results(lambda: list(
         cache.retrieve_interval(start_time, end_time, compute=False)),
@@ -149,7 +152,8 @@ class QueryCacheTest(unittest.TestCase):
     # Decreasing trusted time shouldn't remove results.
     untrusted_time = untrusted_time - timedelta(minutes=40)
     self.verify_results(lambda: list(
-        cache.retrieve_interval(start_time, end_time, untrusted_time)),
+        cache.retrieve_interval(start_time, end_time,
+                                untrusted_time=untrusted_time)),
                         cache, 25, 15)
     self.verify_results(lambda: list(
         cache.retrieve_interval(start_time, end_time, compute=False)),
@@ -171,7 +175,8 @@ class QueryCacheTest(unittest.TestCase):
     # Rerunning the cache/computation should re-cache the corrupted
     # element.
     self.verify_results(lambda: list(
-        cache.retrieve_interval(start_time, end_time, untrusted_time)),
+        cache.retrieve_interval(start_time, end_time,
+                                untrusted_time=untrusted_time)),
                         cache, 25, 16)
     self.verify_results(lambda: list(
         cache.retrieve_interval(start_time, end_time, compute=False)),
@@ -179,7 +184,8 @@ class QueryCacheTest(unittest.TestCase):
 
     # Forcing computation should generate the same result set.
     self.verify_results(lambda: list(
-        cache.retrieve_interval(start_time, end_time, untrusted_time,
+        cache.retrieve_interval(start_time, end_time,
+                                untrusted_time=untrusted_time,
                                 force_compute=True)),
                         cache, 25, 31)
     self.verify_results(lambda: list(

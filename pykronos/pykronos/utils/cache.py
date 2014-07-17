@@ -170,7 +170,7 @@ class QueryCache(object):
         yield (kronos_time_to_epoch_time(first_result[TIMESTAMP_FIELD]),
                first_result[QueryCache.CACHE_KEY])
 
-  def _compute_bucket(self, bucket, untrusted_time, cache=True):
+  def _compute_bucket(self, bucket, untrusted_time=None, cache=True):
     bucket_start = kronos_time_to_datetime(
       epoch_time_to_kronos_time(bucket))
     bucket_end = kronos_time_to_datetime(
@@ -182,7 +182,7 @@ class QueryCache(object):
     if cache:
       # If all events in the bucket happened before the untrusted
       # time, cache the query results.
-      if bucket_end < untrusted_time:
+      if not untrusted_time or bucket_end < untrusted_time:
         caching_event = {TIMESTAMP_FIELD: bucket_start,
                          QueryCache.CACHE_KEY: bucket_events}
         self._client.delete(self._scratch_stream, bucket_start,
@@ -192,9 +192,8 @@ class QueryCache(object):
                          namespace=self._scratch_namespace)
     return bucket_events
 
-  def retrieve_interval(self, start_time, end_time, untrusted_time,
+  def retrieve_interval(self, start_time, end_time, untrusted_time=None,
                         compute=True, force_compute=False, cache=True):
-    print "cache", cache
     """
     Return the results for `query_function` on every `bucket_width`
     time period between `start_time` and `end_time`.  Look for
@@ -216,7 +215,7 @@ class QueryCache(object):
     :param cache: A boolean that, if True, will cache any computed results.
     """
     self._sanity_check_time(start_time, end_time)
-    if not untrusted_time.tzinfo:
+    if untrusted_time and not untrusted_time.tzinfo:
       untrusted_time = untrusted_time.replace(tzinfo=tzutc())
 
     # Generate a list of all cached buckets we need to see data for.
