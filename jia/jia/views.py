@@ -11,15 +11,9 @@ from jia.auth import require_auth
 from jia.decorators import json_endpoint
 from jia.errors import PyCodeError
 from jia.models import Board
-from jia.precompute import DT_FORMAT, precompute_cache
+from jia.compute import QueryCompute, enable_precompute, disable_precompute
 from jia.utils import get_seconds
 from pykronos import KronosClient
-from pykronos.utils.cache import QueryCache
-from pykronos.utils.time import datetime_to_epoch_time
-from pykronos.utils.time import kronos_time_to_datetime
-from pykronos.utils.time import epoch_time_to_kronos_time
-
-from precompute import run_query, schedule, cancel
 
 @app.route('/status', methods=['GET'])
 def status():
@@ -111,13 +105,13 @@ def board(id=None):
 
       # Check for deletions
       if (panel['data_source']['precompute']['enabled'] and not new_panel):
-        cancel(panel)
+        disable_precompute(panel)
 
       # Check for precompute disabled
       elif (panel['data_source']['precompute']['enabled']
             and new_panel
             and not new_panel['data_source']['precompute']['enabled']):
-        cancel(panel)
+        disable_precompute(panel)
 
     for panel in new_panels.values():
       if panel['data_source']['precompute']['enabled']:
@@ -126,7 +120,7 @@ def board(id=None):
         # Check for precompute enabled
         if (not old_panel 
             or not old_panel['data_source']['precompute']['enabled']):
-          task_id = schedule(panel)
+          task_id = enable_precompute(panel)
           panel['data_source']['precompute']['task_id'] = task_id
 
         # Check for code change or precompute settings change
@@ -135,8 +129,8 @@ def board(id=None):
               != panel['data_source']['precompute']
               or old_panel['data_source']['timeframe']
               != panel['data_source']['timeframe']):
-          cancel(old_panel)
-          task_id = schedule(panel)
+          disable_precompute(old_panel)
+          task_id = enable_precompute(panel)
           panel['data_source']['precompute']['task_id'] = task_id
 
       # Transform panel dict back into list for saving
@@ -172,16 +166,10 @@ def callsource(id=None):
   timeframe = request_body.get('timeframe')
   bucket_width = get_seconds(precompute['bucket_width']['value'],
                              precompute['bucket_width']['scale'])
-  bucket_width = epoch_time_to_kronos_time(bucket_width)
-  untrusted_time = get_seconds(precompute['untrusted_time']['value'],
-                               precompute['untrusted_time']['scale'])
-  now = datetime.datetime.now()
-  untrusted_datetime = now - datetime.timedelta(seconds=untrusted_time)
 
-  events = precompute_cache(code, timeframe, bucket_width,
-                            untrusted_time=untrusted_datetime,
-                            cache=False)
-  
+  task = QueryCompute(code, timeframe, bucket_width=bucket_width)
+  events = task.compute(use_cache=precompute['enabled'])
+
   response = {}
   response['events'] = events
   return response

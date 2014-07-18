@@ -94,13 +94,11 @@ class Scheduler(object):
       now = datetime.datetime.now()
       if self._task_queue and self._task_queue[0][0] <= now:
         task = heappop(self._task_queue)[1]
-
         if task['id'] not in self._pending_cancels:
           result = self._executor.submit(_execute, task)
           results.add(result)
         else:
           self._pending_cancels.remove(task['id'])
-
       else:
         # Check for new tasks coming from HTTP
         with gevent.Timeout(0.5, False) as t:
@@ -109,7 +107,6 @@ class Scheduler(object):
             self._schedule(message[1], next_run=now)
           elif message[0] == 'cancel':
             self._cancel(message[1])
-        
         # Reschedule completed tasks
         if not results:
           gevent.sleep(0.5)
@@ -133,6 +130,8 @@ def _execute(task):
   sent to the executor.
 
   TODO(derek): add better exception handling
+  TODO(derek): if the code being `exec`ed modifies the variable `task` (or
+  presumably other things in scope) everything gets messed up
   """
   print "[%s] -- %s -- START" % (datetime.datetime.now(), task['id'])
   try:

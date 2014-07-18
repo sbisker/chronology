@@ -170,7 +170,7 @@ class QueryCache(object):
         yield (kronos_time_to_epoch_time(first_result[TIMESTAMP_FIELD]),
                first_result[QueryCache.CACHE_KEY])
 
-  def _compute_bucket(self, bucket, untrusted_time=None, cache=True):
+  def _compute_bucket(self, bucket, untrusted_time=None, cache=False):
     bucket_start = kronos_time_to_datetime(
       epoch_time_to_kronos_time(bucket))
     bucket_end = kronos_time_to_datetime(
@@ -192,8 +192,50 @@ class QueryCache(object):
                          namespace=self._scratch_namespace)
     return bucket_events
 
-  def retrieve_interval(self, start_time, end_time, untrusted_time=None,
-                        compute=True, force_compute=False, cache=True):
+  def _compute_buckets(self, start_time, end_time, compute_missing=True,
+                       cache=False, untrusted_time=None,
+                       force_recompute=False):
+    self._sanity_check_time(start_time, end_time)
+
+    # Generate a list of all cached buckets we need to see data for.
+    required_buckets = xrange(int(datetime_to_epoch_time(start_time)),
+                              int(datetime_to_epoch_time(end_time)),
+                              self._bucket_width)
+
+    # Get any cached results, grouped by bucket.
+    if force_recompute is True:
+      cached_bucket_iterator = iter([])
+    else:
+      cached_bucket_iterator = iter(self._cached_results(start_time, end_time))
+
+    # Use either the cached results or compute any uncached buckets.
+    # Cache previously uncached results if they are guaranteed to have
+    # happened before the untrusted time.
+    current_cached_bucket = None
+    for required_bucket in required_buckets:
+      if current_cached_bucket == None:
+        try:
+          current_cached_bucket = cached_bucket_iterator.next()
+        except StopIteration:
+          pass
+      emit_events = None
+      if (current_cached_bucket != None) and (
+          current_cached_bucket[0] == required_bucket):
+        emit_events = current_cached_bucket[1]
+        current_cached_bucket = None
+      else:
+        if compute_missing is True:
+          # We don't have cached events, so compute the query.
+          emit_events = self._compute_bucket(required_bucket, untrusted_time,
+                                             cache=cache)
+        else:
+          emit_events = []
+      for event in emit_events:
+        yield event
+    self._client.flush()
+
+  def compute_and_cache_missing_buckets(self, start_time, end_time,
+                                        untrusted_time, force_recompute=False):
     """
     Return the results for `query_function` on every `bucket_width`
     time period between `start_time` and `end_time`.  Look for
@@ -214,41 +256,32 @@ class QueryCache(object):
     recompute and recaching of even previously cached data.
     :param cache: A boolean that, if True, will cache any computed results.
     """
-    self._sanity_check_time(start_time, end_time)
     if untrusted_time and not untrusted_time.tzinfo:
       untrusted_time = untrusted_time.replace(tzinfo=tzutc())
 
-    # Generate a list of all cached buckets we need to see data for.
-    required_buckets = xrange(int(datetime_to_epoch_time(start_time)),
-                              int(datetime_to_epoch_time(end_time)),
-                              self._bucket_width)
+    events = self._compute_buckets(start_time, end_time, compute_missing=True,
+                                   cache=True, untrusted_time=untrusted_time,
+                                   force_recompute=force_recompute)
 
-    # Get any cached results, grouped by bucket.
-    if force_compute is True:
-      cached_bucket_iterator = iter([])
-    else:
-      cached_bucket_iterator = iter(self._cached_results(start_time, end_time))
+    for event in events:
+      yield event
 
-    # Use either the cached results or compute any uncached buckets.
-    # Cache previously uncached results if they are guaranteed to have
-    # happened before the untrusted time.
-    current_cached_bucket = None
-    for required_bucket in required_buckets:
-      if current_cached_bucket == None:
-        try:
-          current_cached_bucket = cached_bucket_iterator.next()
-        except StopIteration:
-          pass
-      emit_events = None
-      if (current_cached_bucket != None) and (
-        current_cached_bucket[0] == required_bucket):
-        emit_events = current_cached_bucket[1]
-        current_cached_bucket = None
-      else:
-        if compute:
-          # We don't have cached events, so compute the query.
-          emit_events = self._compute_bucket(required_bucket, untrusted_time,
-                                             cache=cache)
-      for event in emit_events:
-        yield event
-    self._client.flush()
+
+  def retrieve_interval(self, start_time, end_time, compute_missing=False):
+    """
+    Return the results for `query_function` on every `bucket_width`
+    time period between `start_time` and `end_time`.  Look for
+    previously cached results to avoid recomputation.
+
+    :param start_time: A datetime for the beginning of the range,
+    aligned with `bucket_width`.
+    :param end_time: A datetime for the end of the range, aligned with
+    `bucket_width`.
+    :param compute: A boolean that, if True, will compute any non-cached
+    results.
+    """
+    events = self._compute_buckets(start_time, end_time,
+                                   compute_missing=compute_missing)
+
+    for event in events:
+      yield event
