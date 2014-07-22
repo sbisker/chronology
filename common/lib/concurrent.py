@@ -60,7 +60,7 @@ class Task(object):
     try:
       self.result.set(self.func(*self.args, **self.kwargs))
     except Exception, e:
-      log.exception('Task failed to execute.')
+      log.exception('Task.execute: execution failed.')
       self.result.set_exception(e)
 
 
@@ -167,7 +167,7 @@ class GreenletExecutor(AbstractExecutor):
         self.num_ready += 1
     except:
       pass
-    
+
   def _submit(self, task):
     self.task_queue.put(task)
     if not self.num_ready and self.pool.free_count():
