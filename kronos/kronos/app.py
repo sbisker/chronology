@@ -16,6 +16,7 @@ import kronos
 # Validate settings before importing anything else.
 from kronos.core.validators import validate_settings
 from kronos.conf import settings; validate_settings(settings)
+from kronos.conf import logger; logger.configure()
 
 from kronos.conf.constants import ERRORS_FIELD
 from kronos.conf.constants import MAX_LIMIT
