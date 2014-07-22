@@ -6,6 +6,7 @@ if 'gevent.monkey' not in sys.modules:
   import kronos.core.monkey; kronos.core.monkey.patch_all()
 
 import json
+import logging
 
 from collections import defaultdict
 from cStringIO import StringIO
@@ -27,6 +28,8 @@ from kronos.core.validators import validate_stream
 from kronos.storage.router import router
 from kronos.utils.decorators import endpoint
 from kronos.utils.decorators import ENDPOINTS
+
+log = logging.getLogger(__name__)
 
   
 @endpoint('/1.0/index')
@@ -72,6 +75,8 @@ def put_events(environment, start_response, headers):
     try:
       validate_stream(stream)
     except Exception, e:
+      log.error('put_events: stream validation failed.',
+                extra={'stream': stream})
       errors.append(repr(e))
       continue
 
@@ -100,9 +105,11 @@ def put_events(environment, start_response, headers):
         'num_inserted': len(events_to_insert[stream])
         }
     except Exception, e:
+      log.error('put_events: insertion to backend failed.',
+                extra={'stream': stream, 'backend': backend})
       success = False
       response[stream][backend] = {'num_inserted': -1,
-                                   ERRORS_FIELD: [e]}
+                                   ERRORS_FIELD: [repr(e)]}
 
   response[SUCCESS_FIELD] = success and not errors
   if errors:
@@ -195,6 +202,8 @@ def delete_events(environment, start_response, headers):
   try:
     validate_stream(request_json['stream'])
   except Exception, e:
+    log.error('delete_events: stream validation failed.',
+              extra={'stream': request_json['stream']})
     start_response('400 Bad Request', headers)
     return {ERRORS_FIELD : [repr(e)]}
 
@@ -222,6 +231,8 @@ def delete_events(environment, start_response, headers):
         success = False
         response[ERRORS_FIELD] = errors
     except Exception, e:
+      log.error('delete_events: delete from backend failed.',
+                extra={'backend': backend})
       success = False
       response[backend] = {'num_deleted': -1,
                            ERRORS_FIELD: [repr(e)]}

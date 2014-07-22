@@ -2,6 +2,7 @@ import atexit
 import functools
 import gipc
 import itertools
+import logging
 import multiprocessing
 import pickle
 import signal
@@ -14,6 +15,8 @@ from gevent.event import Event
 from gevent.hub import LoopExit
 from gevent.pool import Pool
 from gevent.queue import Queue
+
+log = logging.getLogger(__name__)
 
 """
 This module provides a high-level interface for executing callables
@@ -57,6 +60,7 @@ class Task(object):
     try:
       self.result.set(self.func(*self.args, **self.kwargs))
     except Exception, e:
+      log.exception('Task failed to execute.')
       self.result.set_exception(e)
 
 
@@ -163,7 +167,7 @@ class GreenletExecutor(AbstractExecutor):
         self.num_ready += 1
     except:
       pass
-
+    
   def _submit(self, task):
     self.task_queue.put(task)
     if not self.num_ready and self.pool.free_count():
