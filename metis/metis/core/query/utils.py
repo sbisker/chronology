@@ -1,7 +1,10 @@
+import datetime
 import random
 import re
 import types
 
+from pykronos.utils.time import kronos_time_to_datetime
+from pykronos.utils.time import datetime_to_kronos_time
 from metis.common.event_tools import get_property
 from metis.core.query.enums import (ConditionType,
                                     ConditionOpType,
@@ -51,6 +54,46 @@ def _floor(value, base, *args):
   return (value - (value % int(base))) + offset
 
 @_safe_function
+def _date_trunc(value, timeframe, *args):
+  assert len(args) in (0, 1)
+  if len(args):
+    offset = args[0]
+  else:
+    offset = datetime.timedelta(seconds=0)
+  value = kronos_time_to_datetime(value)
+  value = value - offset
+  timeframes = {
+    'second': lambda d: d - datetime.timedelta(microseconds=d.microsecond),
+    'minute': lambda d: d - datetime.timedelta(seconds=d.second,
+                                               microseconds=d.microsecond),
+    'hour': lambda d: d - datetime.timedelta(minutes=d.minute,
+                                             seconds=d.second,
+                                             microseconds=d.microsecond),
+    'day': lambda d: d.date(),
+    'week': lambda d: d.date() - datetime.timedelta(days=d.weekday()),
+    'month': lambda d: d.date() - datetime.timedelta(days=d.day-1),
+    'year': lambda d: d.date() - datetime.timedelta(days=d.timetuple().tm_yday-1),
+  }
+  result = timeframes[timeframe](value)
+  if type(result) == datetime.date:
+    result = datetime.datetime.combine(result, datetime.datetime.min.time())
+  return datetime_to_kronos_time(result)
+
+@_safe_function
+def _date_part(value, part):
+  value = kronos_time_to_datetime(value)
+  parts = {
+    'second': lambda d: d.second,
+    'minute': lambda d: d.minute,
+    'hour': lambda d: d.hour,
+    'weekday': lambda d: d.weekday(),
+    'day': lambda d: d.day,
+    'month': lambda d: d.month,
+  }
+  result = parts[part](value)
+  return result
+
+@_safe_function
 def _lowercase(value):
   return value.lower()
 
@@ -80,6 +123,8 @@ _len = _safe_function(len)
 FUNCTIONS = {
   FunctionType.CEIL: _ceil,
   FunctionType.FLOOR: _floor,
+  FunctionType.DATE_TRUNC: _date_trunc,
+  FunctionType.DATE_PART: _date_part,
   FunctionType.LOWERCASE: _lowercase,
   FunctionType.UPPERCASE: _uppercase,
   FunctionType.RANDOM_INT: _randint,
@@ -172,6 +217,7 @@ def _validate_function(function):
   args = function.get('args')
   assert isinstance(args, list)
   for arg in args:
+    print arg
     assert isinstance(arg, dict)
     arg_type = arg.get('type')
     assert arg_type in ValueType.values()

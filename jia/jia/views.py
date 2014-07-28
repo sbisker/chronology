@@ -15,6 +15,8 @@ from jia.compute import QueryCompute, enable_precompute, disable_precompute
 from jia.utils import get_seconds
 from pykronos import KronosClient
 
+import jia.query
+
 @app.route('/status', methods=['GET'])
 def status():
   """ A successful request endpoint without authentication.

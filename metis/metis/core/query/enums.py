@@ -28,6 +28,8 @@ class ConditionOpType(Enum):
 class FunctionType(Enum):
   CEIL = 'ceil'
   FLOOR = 'floor'
+  DATE_TRUNC = 'datetrunc'
+  DATE_PART = 'datepart'
   LOWERCASE = 'lowercase'
   UPPERCASE = 'uppercase'
   RANDOM_INT = 'randint'
