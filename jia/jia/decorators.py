@@ -15,7 +15,7 @@ def json_endpoint(function):
         # Don't call flask's `jsonify` because it sometimes
         # pretty-prints output, calling indent=2 when dumping json.
         # This causes certain datatypes (e.g., `numpy.int64`) to be
-        # implicity converted when they shouldn't be.
+        # implicitly converted when they shouldn't be.
         response = Response(json.dumps(function(*args, **kwargs)),
                             status=200,
                             mimetype='application/json')
