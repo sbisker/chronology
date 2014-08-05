@@ -47,9 +47,8 @@ def redirect_old_board_url(board_id=None):
 @json_endpoint
 @require_auth
 def streams():
-  client = KronosClient(app.config['KRONOS_URL'],
-                        namespace=app.config['KRONOS_NAMESPACE'])
-  kronos_streams = client.get_streams(namespace=app.config['KRONOS_NAMESPACE'])
+  client = KronosClient(app.config['KRONOS_URL'])
+  kronos_streams = client.get_streams()
   kronos_streams = list(kronos_streams)
   return {
     'streams': kronos_streams,
@@ -164,14 +163,21 @@ def delete_board(id=None):
 def callsource(id=None):
   request_body = request.get_json()
   code = request_body.get('code')
+  query = request_body.get('query')
+  stream = request_body.get('stream')
+  print stream
+  metis = request_body.get('source_type') == 'querybuilder'
   precompute = request_body.get('precompute')
   timeframe = request_body.get('timeframe')
   bucket_width = get_seconds(precompute['bucket_width']['value'],
                              precompute['bucket_width']['scale'])
+  
+  if metis:
+    code = query
 
-  task = QueryCompute(code, timeframe, bucket_width=bucket_width)
-  events = task.compute(use_cache=precompute['enabled'])
-
+  task = QueryCompute(code, timeframe, stream=stream, bucket_width=bucket_width)
+  events = task.compute(use_cache=precompute['enabled'], metis=metis)
+  
   response = {}
   response['events'] = events
   return response

@@ -1,12 +1,11 @@
-<div ng-controller="QueryBuilderController">
-  {[ query ]}
+<div>
   <ul class="steps">
-    <li ng-repeat="step in query">
+    <li ng-repeat="step in query track by $index">
       <div class="btn-group">
       <button class="btn btn-danger" ng-click="delete(step)">
         &times;
       </button>
-      <operator operator="step.operator"></operator>
+      <operator operator="step"></operator>
       </div>
     </li>
     <li>

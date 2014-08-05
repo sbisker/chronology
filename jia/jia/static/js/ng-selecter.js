@@ -145,7 +145,6 @@ angular.module('selecter', [])
     scope.$watch('model', function (newVal, oldVal) {
       // The timeout of zero is magic to wait for an ng-repeat to finish
       // populating the <select>. See: http://stackoverflow.com/q/12240639/
-      console.log('model', newVal, oldVal, scope.sid);
       setTimeout(function () { updateSelector(newVal); });
     });
 

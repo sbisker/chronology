@@ -155,7 +155,7 @@
       <div class="code-controls query-builder"
            ng-show="panel.data_source.display">
         <div class="stream">
-          <ui-select ng-model="person.selected" theme="bootstrap">
+          <ui-select ng-model="panel.data_source.stream" theme="bootstrap">
             <ui-select-match placeholder="Stream">
               {[ $select.selected ]}
               <span class="input-fade"></span> 
@@ -251,8 +251,9 @@
           </label>
         </div>
       </div>
-
-      <querybuilder ng-if="panel.data_source.display &&
+      
+      <querybuilder query="panel.data_source.query"
+                    ng-if="panel.data_source.display &&
                            panel.data_source.source_type == 'querybuilder'">
       </querybuilder>
 

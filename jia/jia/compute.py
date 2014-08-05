@@ -1,9 +1,12 @@
 import datetime
 import inspect
+import json
 import math
+import requests
 import sys
-from jia.utils import get_seconds
 from jia.errors import PyCodeError
+from jia.query import translate_query
+from jia.utils import get_seconds
 from pykronos import KronosClient
 from pykronos.utils.cache import QueryCache
 from pykronos.utils.time import datetime_to_epoch_time
@@ -50,7 +53,7 @@ compute.cache()
 """
 
 
-DT_FORMAT = '%a %b %d %Y %H:%M:%S'
+DT_FORMAT = '%b %d %Y %H:%M:%S'
 
 
 class QueryCompute(object):
@@ -62,7 +65,8 @@ class QueryCompute(object):
   the cache via the `cache` method, both `bucket_width` and `untrusted_time`
   must be specified.
   """
-  def __init__(self, query, timeframe, bucket_width=None, untrusted_time=None):
+  def __init__(self, query, timeframe, stream=None, bucket_width=None,
+               untrusted_time=None):
     """Initialize QueryCompute
     :param query: A string of python code to execute as a Jia query.
     :param timeframe: A timeframe dictionary. It specifies a mode, which can be
@@ -81,10 +85,12 @@ class QueryCompute(object):
       'to': 'Sun Jun 11 2014 00:00:00',
     }
 
+    :param stream: The stream name to query
     :param bucket_width: Optional bucket width in seconds
     :param untrusted_time: Optional untrusted time interval in seconds
     """
     self._query = query
+    self._stream = stream
     self._bucket_width = bucket_width
     self._untrusted_time = untrusted_time
     self._start_time, self._end_time = self._get_timeframe_bounds(timeframe,
@@ -113,10 +119,11 @@ class QueryCompute(object):
     # TODO(derek): Potential optimization by setting the end_time equal to the
     # untrusted_time if end_time > untrusted_time and the results are not being
     # output to the user (only for caching)
-    if timeframe['mode'] == 'recent':
+    if timeframe['mode']['value'] == 'recent':
       # Set end_time equal to now and align to bucket width
       end_time = datetime_to_kronos_time(datetime.datetime.now())
-      duration = get_seconds(timeframe['value'], timeframe['scale'])
+      original_end_time = end_time
+      duration = get_seconds(timeframe['value'], timeframe['scale']['name'])
       duration = epoch_time_to_kronos_time(duration)
 
       if bucket_width:
@@ -136,7 +143,7 @@ class QueryCompute(object):
       start_time = end_time - duration
       start = kronos_time_to_datetime(start_time)
       end = kronos_time_to_datetime(end_time)
-    elif timeframe['mode'] == 'range':
+    elif timeframe['mode']['value'] == 'range':
       end = datetime.datetime.strptime(timeframe['to'], DT_FORMAT)
       end_seconds = datetime_to_epoch_time(end)
 
@@ -189,7 +196,18 @@ class QueryCompute(object):
 
     return events
 
-  def compute(self, use_cache=True):
+  def _run_metis(self, start_time, end_time, unique_id=None):
+    start_time = datetime_to_kronos_time(start_time)
+    end_time = datetime_to_kronos_time(end_time)
+    print self._query
+    q = translate_query(self._query, self._stream, start_time, end_time)
+    print q
+    r = requests.post("%s/1.0/query" % app.config['METIS_URL'], data=q)
+    print r.text
+    # exit()
+    return json.loads('[%s]' % (',').join(r.text.splitlines()))
+
+  def compute(self, metis=False, use_cache=True):
     """Call a user defined query and return events with optional help from
     the cache.
     
@@ -203,7 +221,10 @@ class QueryCompute(object):
                                                       self._end_time,
                                                       compute_missing=True))
     else:
-      return self._run_query(self._start_time, self._end_time)
+      if metis:
+        return self._run_metis(self._start_time, self._end_time)
+      else:
+        return self._run_query(self._start_time, self._end_time)
 
   def cache(self):
     """Call a user defined query and cache the results"""

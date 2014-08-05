@@ -91,7 +91,6 @@ class Scheduler(object):
     results = set()
 
     while True:
-      print "loop"
       now = datetime.datetime.now()
       if self._task_queue and self._task_queue[0][0] <= now:
         task = heappop(self._task_queue)[1]

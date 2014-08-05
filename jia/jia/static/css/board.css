@@ -523,16 +523,24 @@ ul.steps {
 }
 
 ul.steps li {
+  position: relative;
+  min-height: 77px;
 }
 
 ul.steps li:after {
   content: "";
   display: block;
+  position: absolute;
   width: 70px;
-  height: 40px;
+  left: 57px;
+  top: 33px;
+  bottom: 0;
   background-image: url(images/arrow.png);
-  background-size: 70px 40px;
-  margin-left: 57px;
+  background-size: 70px 100%;
+}
+
+ul.steps li:last-child {
+  min-height: 0;
 }
 
 ul.steps li:last-child:after {

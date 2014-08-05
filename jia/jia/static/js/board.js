@@ -316,11 +316,12 @@ function ($scope, $http, $location, $timeout, $injector, $routeParams,
         source_type: 'querybuilder',
         refresh_seconds: null,
         code: '',
-        stream: '',
+        stream: undefined,
+        query: [],
         timeframe: {
           mode: $scope.timeframeModes[0],
           value: 2,
-          scale: 'days',
+          scale: $scope.timeScales[3],
           from: moment().subtract('days', 2).format($scope.dateTimeFormat),
           to: moment().format($scope.dateTimeFormat)
         },
@@ -474,3 +475,4 @@ app.directive('visualization', function ($http, $compile) {
     }
   };
 });
+
